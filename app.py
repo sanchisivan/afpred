@@ -44,8 +44,8 @@ def index():
                 encoded = encode_sequence(sequence)
                 prob = model.predict(encoded)[0][0]
                 probability_percent = round(prob * 100, 2)
-                prediction_label = "Likely antifungal" if prob >= 0.5 else "Not antifungal"
-                alert_class = "success" if prob >= 0.5 else "danger"
+                prediction_label = "Likely antifungal" if prob >= 0.8 else "Not antifungal"
+                alert_class = "success" if prob >= 0.8 else "danger"
             except ValueError as e:
                 prediction_label = f"Error: {str(e)}"
                 alert_class = "warning"
