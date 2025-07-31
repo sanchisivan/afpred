@@ -17,23 +17,49 @@ max_length = 40
 
 def encode_sequence(seq):
     seq = seq.lower()
-    encoded = [aa_to_int.get(aa, 0) for aa in seq]
+    valid_aas = set(aa_to_int.keys())
+
+    if not (6 <= len(seq) <= 40):
+        raise ValueError("Sequence must be between 6 and 40 amino acids.")
+
+    if any(aa not in valid_aas for aa in seq):
+        raise ValueError("Sequence contains invalid characters. Only natural amino acids are allowed.")
+
+    encoded = [aa_to_int[aa] for aa in seq]
     return pad_sequences([encoded], maxlen=max_length, padding='post')
 
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    prediction = None
+    prediction_label = None
+    alert_class = None
+    probability_percent = None
     sequence = ""
+
     if request.method == "POST":
         sequence = request.form["sequence"]
         if sequence:
-            encoded = encode_sequence(sequence)
-            prob = model.predict(encoded)[0][0]
-            prediction = f"{prob:.4f}"
-    return render_template("index.html", prediction=prediction, sequence=sequence)
+            try:
+                encoded = encode_sequence(sequence)
+                prob = model.predict(encoded)[0][0]
+                probability_percent = round(prob * 100, 2)
+                prediction_label = "Likely antifungal" if prob >= 0.5 else "Not antifungal"
+                alert_class = "success" if prob >= 0.5 else "danger"
+            except ValueError as e:
+                prediction_label = f"Error: {str(e)}"
+                alert_class = "warning"
+                probability_percent = 0
+
+    return render_template(
+        "index.html",
+        prediction_label=prediction_label,
+        probability_percent=probability_percent,
+        alert_class=alert_class,
+        sequence=sequence
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
