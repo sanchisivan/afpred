@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+import os
 
 # Load model
 model = load_model("antifungal_peptide_model.h5")
@@ -34,4 +35,5 @@ def index():
     return render_template("index.html", prediction=prediction, sequence=sequence)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
