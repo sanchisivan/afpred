@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Predicción Antifúngica</title>
+</head>
+<body>
+    <h1>Predicción de Actividad Antifúngica de Péptidos</h1>
+    <form method="POST">
+        <label for="sequence">Ingrese la secuencia de aminoácidos (solo naturales):</label><br>
+        <input type="text" name="sequence" id="sequence" size="60" value="{{ sequence }}"><br><br>
+        <input type="submit" value="Predecir">
+    </form>
+    {% if prediction %}
+        <h2>Resultado:</h2>
+        <p>{{ prediction }}</p>
+    {% endif %}
+</body>
+</html>

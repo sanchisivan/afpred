@@ -1,5 +1,3 @@
-fastapi
-uvicorn
-tensorflow==2.12.0
+Flask
+tensorflow
 numpy
-pydantic
