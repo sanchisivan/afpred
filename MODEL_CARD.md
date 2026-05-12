@@ -20,7 +20,7 @@ AFPRED estimates whether short peptide sequences are likely to show antifungal a
 - Descriptor-based flags that help prioritize follow-up checks such as hemolysis, solubility, membrane activity, and sequence complexity.
 - On-demand exploratory in silico variant panels that reuse the same model and descriptors to compare simple substitutions or truncations against a parent sequence.
 - Property-only utility API for descriptor calculation without invoking the antifungal model.
-- Downloadable report packs with CSV/FASTA data, editable SVG plots, and self-contained HTML summaries for prediction, utility, and variant workflows.
+- Downloadable report packs with CSV/FASTA data, editable SVG plots, and self-contained HTML summaries for prediction, utility, and variant workflows; utility packs include descriptor maps, aggregation-risk plots, liability summaries, and residue-composition heatmaps.
 - Position-level mutation suggestions that report the best predicted single-residue substitution for each position of the selected parent peptide.
 
 ## Current Decision Labels

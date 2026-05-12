@@ -744,6 +744,264 @@ def charge_profiles_svg(results):
     )
 
 
+def numeric_property_rows(results, x_key, y_key):
+    rows = []
+    for row in valid_rows(results):
+        properties = row.get("properties") or {}
+        x_value = properties.get(x_key)
+        y_value = properties.get(y_key)
+        if isinstance(x_value, (int, float)) and isinstance(y_value, (int, float)):
+            rows.append((row, float(x_value), float(y_value)))
+    return rows
+
+
+def axis_range(values, padding=0.08, include_zero=False):
+    usable = [float(value) for value in values if value is not None]
+    if include_zero:
+        usable.append(0.0)
+    if not usable:
+        return -1.0, 1.0
+    low = min(usable)
+    high = max(usable)
+    if low == high:
+        low -= 1.0
+        high += 1.0
+    span = high - low
+    return low - span * padding, high + span * padding
+
+
+def descriptor_scatter_svg(results, x_key, y_key, title, subtitle, x_label, y_label):
+    rows = numeric_property_rows(results, x_key, y_key)
+    if not rows:
+        return no_data_svg(title)
+
+    width = 900
+    height = 520
+    left = 92
+    top = 86
+    plot_width = width - left - 68
+    plot_height = height - top - 78
+    min_x, max_x = axis_range([x for _, x, _ in rows])
+    min_y, max_y = axis_range([y for _, _, y in rows], include_zero=True)
+
+    def x_scale(value):
+        return left + plot_width * (value - min_x) / (max_x - min_x)
+
+    def y_scale(value):
+        return top + plot_height - plot_height * (value - min_y) / (max_y - min_y)
+
+    parts = [
+        f'<line x1="{left}" y1="{top + plot_height}" x2="{left + plot_width}" y2="{top + plot_height}" stroke="#26364f"/>',
+        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_height}" stroke="#26364f"/>',
+        f'<text x="{left + plot_width / 2:.1f}" y="{height - 26}" fill="#94a8bd" font-family="Arial, sans-serif" font-size="13" text-anchor="middle">{escape(x_label, quote=True)}</text>',
+        f'<text x="24" y="{top + plot_height / 2:.1f}" fill="#94a8bd" font-family="Arial, sans-serif" font-size="13" transform="rotate(-90 24 {top + plot_height / 2:.1f})" text-anchor="middle">{escape(y_label, quote=True)}</text>',
+    ]
+    for index in range(6):
+        fraction = index / 5
+        x_value = min_x + (max_x - min_x) * fraction
+        y_value = min_y + (max_y - min_y) * fraction
+        x = x_scale(x_value)
+        y = y_scale(y_value)
+        parts.append(f'<line x1="{x:.1f}" y1="{top}" x2="{x:.1f}" y2="{top + plot_height}" stroke="#26364f" opacity="0.32"/>')
+        parts.append(f'<text x="{x:.1f}" y="{top + plot_height + 22}" fill="#94a8bd" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">{x_value:.1f}</text>')
+        parts.append(f'<line x1="{left - 5}" y1="{y:.1f}" x2="{left + plot_width}" y2="{y:.1f}" stroke="#26364f" opacity="0.32"/>')
+        parts.append(f'<text x="{left - 14}" y="{y + 4:.1f}" fill="#94a8bd" font-family="Arial, sans-serif" font-size="11" text-anchor="end">{y_value:.2f}</text>')
+
+    labeled = sorted(rows, key=lambda item: item[0].get("properties", {}).get("length", 0), reverse=True)[:8]
+    labeled_ids = {row.get("id") for row, _, _ in labeled}
+    for row, x_value, y_value in rows:
+        x = x_scale(x_value)
+        y = y_scale(y_value)
+        score = row.get("probability_percent")
+        color = PLOT_STATUS_COLORS.get(row.get("status"), "#118ab2")
+        radius = 6 if score is None else 5 + min(7, max(0, score / 16))
+        parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{radius:.1f}" fill="{color}" fill-opacity="0.78" stroke="#edf4fb" stroke-opacity="0.28"/>')
+        if row.get("id") in labeled_ids:
+            parts.append(f'<text x="{x + 9:.1f}" y="{y - 8:.1f}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="11">{clean_plot_label(row.get("id"), 22)}</text>')
+
+    return plot_shell(title, subtitle, width, height, "\n  ".join(parts))
+
+
+def mass_pi_svg(results):
+    return descriptor_scatter_svg(
+        results,
+        "molecular_weight",
+        "isoelectric_point",
+        "Mass vs pI",
+        "Molecular weight and estimated isoelectric point for valid peptide inputs.",
+        "Molecular weight (Da)",
+        "Estimated pI",
+    )
+
+
+def hydropathy_moment_svg(results):
+    return descriptor_scatter_svg(
+        results,
+        "gravy",
+        "hydrophobic_moment",
+        "Hydropathy vs hydrophobic moment",
+        "Mean KD hydropathy against amphipathic signal for utility triage.",
+        "GRAVY / KD hydropathy",
+        "Hydrophobic moment",
+    )
+
+
+def aggregation_risk_svg(results):
+    rows = sorted(
+        [
+            row
+            for row in valid_rows(results)
+            if isinstance(row.get("properties", {}).get("aggregation_risk_score"), (int, float))
+        ],
+        key=lambda row: (
+            row["properties"]["aggregation_risk_score"],
+            row["properties"].get("max_hydrophobic_run") or 0,
+        ),
+        reverse=True,
+    )[:25]
+    if not rows:
+        return no_data_svg("Aggregation risk")
+
+    width = 980
+    top = 92
+    row_gap = 30
+    height = top + len(rows) * row_gap + 48
+    left = 215
+    right = 65
+    plot_width = width - left - right
+    max_score = max([6] + [row["properties"]["aggregation_risk_score"] for row in rows])
+    parts = [
+        f'<line x1="{left}" y1="{top - 18}" x2="{left + plot_width}" y2="{top - 18}" stroke="#26364f"/>',
+    ]
+    for tick in range(0, int(max_score) + 1):
+        x = left + plot_width * tick / max_score
+        parts.append(f'<line x1="{x:.1f}" y1="{top - 24}" x2="{x:.1f}" y2="{height - 38}" stroke="#26364f" opacity="0.45"/>')
+        parts.append(f'<text x="{x:.1f}" y="{height - 18}" fill="#94a8bd" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">{tick}</text>')
+
+    for index, row in enumerate(rows):
+        properties = row["properties"]
+        score = properties["aggregation_risk_score"]
+        run = properties.get("max_hydrophobic_run") or 0
+        y = top + index * row_gap
+        bar_width = max(2, plot_width * score / max_score)
+        color = "#ef476f" if score >= 4 else "#ffd166" if score >= 2 else "#06d6a0"
+        parts.append(f'<text x="34" y="{y + 14}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="12">{clean_plot_label(row.get("id"))}</text>')
+        parts.append(f'<rect x="{left}" y="{y}" width="{bar_width:.1f}" height="18" rx="5" fill="{color}"/>')
+        parts.append(f'<text x="{left + bar_width + 8:.1f}" y="{y + 14}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="12">score {score} | max run {run}</text>')
+
+    return plot_shell(
+        "Aggregation risk",
+        "Descriptor-based aggregation risk score with longest hydrophobic run context.",
+        width,
+        height,
+        "\n  ".join(parts),
+    )
+
+
+def chemical_liability_flags_svg(results):
+    rows = []
+    for row in valid_rows(results):
+        liabilities = row.get("properties", {}).get("chemical_liabilities") or []
+        caution = sum(1 for item in liabilities if item.get("kind") == "caution")
+        context = sum(1 for item in liabilities if item.get("kind") == "context")
+        signal = sum(1 for item in liabilities if item.get("kind") == "signal")
+        total = caution + context + signal
+        rows.append((row, caution, context, signal, total))
+    rows = sorted(rows, key=lambda item: (item[4], item[1], item[2]), reverse=True)[:25]
+    if not rows:
+        return no_data_svg("Chemical liability flags")
+
+    width = 980
+    top = 92
+    row_gap = 31
+    height = top + len(rows) * row_gap + 60
+    left = 215
+    right = 70
+    plot_width = width - left - right
+    max_total = max([1] + [item[4] for item in rows])
+    colors = {"caution": "#ffd166", "context": "#118ab2", "signal": "#06d6a0"}
+    parts = [
+        f'<text x="{left}" y="{top - 30}" fill="{colors["caution"]}" font-family="Arial, sans-serif" font-size="12">caution</text>',
+        f'<text x="{left + 82}" y="{top - 30}" fill="{colors["context"]}" font-family="Arial, sans-serif" font-size="12">context</text>',
+        f'<text x="{left + 164}" y="{top - 30}" fill="{colors["signal"]}" font-family="Arial, sans-serif" font-size="12">signal</text>',
+    ]
+    for index, (row, caution, context, signal, total) in enumerate(rows):
+        y = top + index * row_gap
+        parts.append(f'<text x="34" y="{y + 14}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="12">{clean_plot_label(row.get("id"))}</text>')
+        cursor = left
+        for kind, count in [("caution", caution), ("context", context), ("signal", signal)]:
+            if count:
+                width_segment = plot_width * count / max_total
+                parts.append(f'<rect x="{cursor:.1f}" y="{y}" width="{width_segment:.1f}" height="18" rx="5" fill="{colors[kind]}"/>')
+                cursor += width_segment
+        if total == 0:
+            parts.append(f'<line x1="{left}" y1="{y + 9}" x2="{left + 20}" y2="{y + 9}" stroke="#94a8bd"/>')
+        parts.append(f'<text x="{left + plot_width + 8}" y="{y + 14}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="12">{total}</text>')
+
+    return plot_shell(
+        "Chemical liability flags",
+        "Count of lightweight sequence-level liability and context flags by peptide.",
+        width,
+        height,
+        "\n  ".join(parts),
+    )
+
+
+def residue_composition_heatmap_svg(results):
+    rows = valid_rows(results)[:18]
+    if not rows:
+        return no_data_svg("Residue composition heatmap")
+
+    amino_acids = list("ACDEFGHIKLMNPQRSTVWY")
+    width = 1120
+    top = 100
+    left = 170
+    cell = 34
+    row_gap = 6
+    height = top + len(rows) * (cell + row_gap) + 72
+    max_percent = max(
+        [
+            item.get("percent", 0)
+            for row in rows
+            for item in row.get("properties", {}).get("composition", [])
+        ]
+        + [1]
+    )
+
+    def color(percent):
+        intensity = min(1.0, percent / max_percent)
+        green = int(90 + 150 * intensity)
+        blue = int(110 + 90 * (1 - intensity))
+        return f"rgb(17,{green},{blue})"
+
+    parts = []
+    for index, aa in enumerate(amino_acids):
+        x = left + index * cell
+        parts.append(f'<text x="{x + cell / 2:.1f}" y="{top - 18}" fill="#94a8bd" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">{aa}</text>')
+
+    for row_index, row in enumerate(rows):
+        y = top + row_index * (cell + row_gap)
+        composition = {
+            item["aa"]: item["percent"]
+            for item in row.get("properties", {}).get("composition", [])
+        }
+        parts.append(f'<text x="34" y="{y + 22}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="12">{clean_plot_label(row.get("id"), 24)}</text>')
+        for aa_index, aa in enumerate(amino_acids):
+            x = left + aa_index * cell
+            percent = composition.get(aa, 0)
+            parts.append(f'<rect x="{x:.1f}" y="{y}" width="{cell - 4}" height="{cell - 4}" rx="5" fill="{color(percent)}" stroke="#26364f"/>')
+            if percent:
+                parts.append(f'<text x="{x + cell / 2 - 2:.1f}" y="{y + 20}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="9" text-anchor="middle">{percent:g}</text>')
+
+    return plot_shell(
+        "Residue composition heatmap",
+        "Percent residue composition for the first valid peptides in the utility batch.",
+        width,
+        height,
+        "\n  ".join(parts),
+    )
+
+
 def variant_delta_svg(variant_results):
     rows = [
         row
@@ -1064,6 +1322,11 @@ def build_utility_report_pack(results, summary):
     plots = {
         "charge_hydrophobicity_map.svg": property_map_svg(results),
         "charge_profiles.svg": charge_profiles_svg(results),
+        "mass_pi_map.svg": mass_pi_svg(results),
+        "hydropathy_moment_map.svg": hydropathy_moment_svg(results),
+        "aggregation_risk.svg": aggregation_risk_svg(results),
+        "chemical_liability_flags.svg": chemical_liability_flags_svg(results),
+        "residue_composition_heatmap.svg": residue_composition_heatmap_svg(results),
     }
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
