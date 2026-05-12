@@ -7,7 +7,7 @@ AFPRED is a Flask web application for screening short peptide sequences with a t
 - Single and batch prediction for peptides of 6-40 canonical amino acids.
 - FASTA, one-sequence-per-line, comma/semicolon separated, CSV, or TSV input with candidate IDs preserved when an ID/name column is supplied.
 - Adjustable decision threshold.
-- CSV export of predictions and descriptors plus clean FASTA export for valid sequences.
+- CSV export of predictions and descriptors, clean FASTA export for valid sequences, and downloadable report packs with SVG plots plus a self-contained HTML report.
 - JSON API endpoints for prediction, variant exploration, and property-only utilities.
 - On-demand variant exploration endpoint for activity-boosting substitution scans, alanine scans, tryptophan scans, charge scans, hydrophobicity tempering, and terminal truncations.
 - Health endpoint for deployment monitoring.
@@ -16,8 +16,9 @@ AFPRED is a Flask web application for screening short peptide sequences with a t
 - Interpretation flags for membrane-active profiles, high hydrophobicity, low cationic character, aromatic enrichment, cysteine-rich candidates, basic residue clusters, and low-complexity sequences.
 - Descriptor-based screening tier to separate candidates to advance, review, or deprioritize.
 - Position-level mutation summary for the best predicted single-residue substitution at each position of the selected parent peptide.
-- Variant CSV and FASTA exports with parent sequence, mutation, score delta, rationale, and core descriptor fields.
+- Variant CSV, FASTA, and report-pack exports with parent sequence, mutation, score delta, rationale, plots, and core descriptor fields.
 - A standalone Utilities tab for PepCalc-style calculations without running the antifungal model.
+- Utilities report packs with descriptor CSV, charge/hydrophobicity plots, pH charge profiles, and an HTML summary.
 - A tabbed scientific workbench interface with prediction, design, utilities, batch/export, model-readiness, and information/contact sections.
 - External model integration notes for AMP, toxicity, hemolysis, and antifungal-protein predictors that could be wired in as optional screening backends.
 
@@ -126,6 +127,21 @@ This endpoint returns the Utilities-tab descriptors without loading or invoking 
 ## Utilities Tab
 
 The Utilities tab computes physicochemical properties without invoking the AFPRED model. It accepts the same plain-text, CSV/TSV-like, or FASTA inputs and exports a utility CSV with formula, mass, pI, pH-dependent charge, GRAVY/KD and Eisenberg hydrophobicity descriptors, hydrophobic moment, hydrophobic face angle, HeliQuest-like discriminant, Boman-like index, disorder-promoting fraction, aggregation-risk descriptors, extinction coefficients, and sequence-level liability flags for oxidation, deamidation/isomerization, cyclization, protease-like cleavage motifs, solubility, aggregation, and charge/pI context.
+
+## Report Packs
+
+The prediction and design forms can export ZIP report packs. Each pack includes:
+
+- A self-contained HTML report for sharing or archiving.
+- Editable SVG plots for score ranking, score distribution, charge/hydrophobicity mapping, and pH charge profiles.
+- CSV and FASTA data files for downstream analysis.
+- For variant report packs, a variant delta plot plus variant CSV/FASTA files.
+
+In the web app, these are in the highlighted **Plots & Reports** sections:
+
+- Predict tab: `Download Prediction Plot Report ZIP`
+- Predict tab, with a selected variant utility: `Download Variant Plot Report ZIP`
+- Utilities tab: `Download Utility Plot Report ZIP`
 
 ## Deployment
 

@@ -315,6 +315,39 @@
       background: var(--green-soft);
     }
 
+    .action-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .action-section {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .action-section.primary-action {
+      border-color: rgba(6, 214, 160, 0.38);
+      background: var(--green-soft);
+    }
+
+    .action-section.report-action {
+      border-color: rgba(255, 209, 102, 0.42);
+      background: var(--gold-soft);
+    }
+
+    .action-title {
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
     .quick-grid,
     .result-list,
     .stack {
@@ -922,7 +955,7 @@
       <button class="tab-button {% if active_tab == 'predict' %}active{% endif %}" type="button" data-tab="predict">Predict</button>
       <button class="tab-button {% if active_tab == 'design' %}active{% endif %}" type="button" data-tab="design">Analyze & Design</button>
       <button class="tab-button {% if active_tab == 'utilities' %}active{% endif %}" type="button" data-tab="utilities">Utilities</button>
-      <button class="tab-button" type="button" data-tab="batch">Batch & Models</button>
+      <button class="tab-button" type="button" data-tab="batch">Reports & Export</button>
       <button class="tab-button" type="button" data-tab="contact">Info & Contact</button>
     </nav>
 
@@ -963,13 +996,27 @@
                 <div class="form-text mt-2">Run Prediction screens the batch. Run Design Utility applies the selected mutation analysis to the top-scoring valid parent.</div>
               </div>
 
-              <div class="d-grid gap-2">
-                <button type="submit" name="action" value="predict" class="btn btn-primary">Run Prediction</button>
-                <button type="submit" name="action" value="variants" class="btn btn-outline-secondary">Run Design Utility</button>
-                <button type="submit" name="action" value="download" class="btn btn-outline-secondary">Export Prediction CSV</button>
-                <button type="submit" name="action" value="fasta_download" class="btn btn-outline-secondary">Export Prediction FASTA</button>
-                <button type="submit" name="action" value="variant_download" class="btn btn-outline-secondary">Export Variant CSV</button>
-                <button type="submit" name="action" value="variant_fasta" class="btn btn-outline-secondary">Export Variant FASTA</button>
+              <div class="action-stack">
+                <div class="action-section primary-action">
+                  <span class="action-title">Run analysis</span>
+                  <button type="submit" name="action" value="predict" class="btn btn-primary">Run Prediction</button>
+                  <button type="submit" name="action" value="variants" class="btn btn-outline-secondary">Run Design Utility</button>
+                </div>
+
+                <div class="action-section report-action">
+                  <span class="action-title">Plots & reports</span>
+                  <button type="submit" name="action" value="report_pack" class="btn btn-outline-secondary">Download Prediction Plot Report ZIP</button>
+                  <button type="submit" name="action" value="variant_report_pack" class="btn btn-outline-secondary">Download Variant Plot Report ZIP</button>
+                  <div class="form-text">ZIP exports include a self-contained HTML report, editable SVG plots, CSV files, and FASTA files.</div>
+                </div>
+
+                <div class="action-section">
+                  <span class="action-title">Data-only exports</span>
+                  <button type="submit" name="action" value="download" class="btn btn-outline-secondary">Export Prediction CSV</button>
+                  <button type="submit" name="action" value="fasta_download" class="btn btn-outline-secondary">Export Prediction FASTA</button>
+                  <button type="submit" name="action" value="variant_download" class="btn btn-outline-secondary">Export Variant CSV</button>
+                  <button type="submit" name="action" value="variant_fasta" class="btn btn-outline-secondary">Export Variant FASTA</button>
+                </div>
               </div>
             </form>
 
@@ -1076,7 +1123,7 @@
                 <div>
                   <h2>No variants yet</h2>
                   <p class="mb-0">
-                    {% if action in ["variants", "variant_download", "variant_fasta"] and variant_parent %}
+                    {% if action in ["variants", "variant_download", "variant_fasta", "variant_report_pack"] and variant_parent %}
                       No variants could be generated for this parent with the selected utility.
                     {% else %}
                       Enter at least one valid peptide sequence and press Run Design Utility. The selected analysis runs only on the top-scoring valid parent.
@@ -1161,9 +1208,22 @@
                 <div class="form-text mt-2">Optional TXT, FASTA, CSV, or TSV file.</div>
               </div>
 
-              <div class="d-grid gap-2">
-                <button type="submit" name="action" value="utilities" class="btn btn-primary">Calculate Utilities</button>
-                <button type="submit" name="action" value="utility_download" class="btn btn-outline-secondary">Export Utility CSV</button>
+              <div class="action-stack">
+                <div class="action-section primary-action">
+                  <span class="action-title">Run calculator</span>
+                  <button type="submit" name="action" value="utilities" class="btn btn-primary">Calculate Utilities</button>
+                </div>
+
+                <div class="action-section report-action">
+                  <span class="action-title">Plots & reports</span>
+                  <button type="submit" name="action" value="utility_report_pack" class="btn btn-outline-secondary">Download Utility Plot Report ZIP</button>
+                  <div class="form-text">ZIP export includes an HTML report, descriptor CSV, charge/hydrophobicity map, and pH charge profile SVGs.</div>
+                </div>
+
+                <div class="action-section">
+                  <span class="action-title">Data-only export</span>
+                  <button type="submit" name="action" value="utility_download" class="btn btn-outline-secondary">Export Utility CSV</button>
+                </div>
               </div>
             </form>
 
@@ -1281,15 +1341,23 @@
     <section class="tab-panel" data-tab-panel="batch">
       <div class="two-col">
         <section class="panel">
-          <div class="panel-header"><h2 class="panel-title">Batch and Export</h2></div>
+          <div class="panel-header"><h2 class="panel-title">Reports and Export</h2></div>
           <div class="panel-body stack">
+            <div class="callout signal">
+              <span class="callout-title">Where to export plots</span>
+              <span class="callout-detail">Use the Predict tab, then open the highlighted Plots & Reports box under the sequence form. Use Download Prediction Plot Report ZIP for screening plots, or Download Variant Plot Report ZIP after choosing a variant utility.</span>
+            </div>
+            <div class="callout context">
+              <span class="callout-title">Utility report packs</span>
+              <span class="callout-detail">Use the Utilities tab and the highlighted Plots & Reports box to export descriptor plots without running the antifungal model.</span>
+            </div>
             <div class="callout context">
               <span class="callout-title">Accepted formats</span>
               <span class="callout-detail">Use one sequence per line, comma/semicolon separated text, or FASTA records. Invalid sequences are reported per record so the full batch can still be reviewed.</span>
             </div>
             <div class="callout signal">
-              <span class="callout-title">CSV and FASTA export</span>
-              <span class="callout-detail">Prediction exports include scores, rank, duplicate status, screening tier, formula, pI, charge at pH 5.5/7.4, descriptors, interpretation flags, validation errors, and clean FASTA output for valid sequences. Variant exports add parent ID, mutation, position, score delta, rationale, and descriptor fields.</span>
+              <span class="callout-title">CSV, FASTA, plots, and reports</span>
+              <span class="callout-detail">Prediction exports include scores, rank, duplicate status, screening tier, formula, pI, charge at pH 5.5/7.4, descriptors, interpretation flags, validation errors, clean FASTA output for valid sequences, editable SVG plots, and a self-contained HTML report. Variant report packs add parent ID, mutation, position, score delta, rationale, and descriptor fields.</span>
             </div>
             <div class="callout caution">
               <span class="callout-title">Model representation</span>
