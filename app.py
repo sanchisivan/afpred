@@ -30,6 +30,7 @@ from utils import (
 
 
 MODEL_PATH = "antifungal_peptide_model.h5"
+APP_VERSION = "2026.05.12-report-exports"
 DEFAULT_VARIANT_MODE = "activity_optimization"
 DESIGN_ACTIONS = {"variants", "variant_download", "variant_fasta", "variant_report_pack"}
 REPORT_ACTIONS = {"report_pack", "variant_report_pack"}
@@ -82,6 +83,15 @@ EXTERNAL_MODEL_CANDIDATES = [
 ]
 
 app = Flask(__name__)
+
+
+@app.after_request
+def add_no_cache_headers(response):
+    if response.content_type and response.content_type.startswith("text/html"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 @lru_cache(maxsize=1)
@@ -1365,6 +1375,7 @@ def index():
         variant_position_summary=variant_position_summary,
         action=action,
         active_tab=active_tab,
+        app_version=APP_VERSION,
         model_name="AFPRED",
         lab_name="Laboratory of Bioactive Peptides",
         contact_email="sanchisivan@fbcb.unl.edu.ar",
@@ -1464,10 +1475,27 @@ def health():
     return jsonify(
         {
             "status": "ok",
+            "version": APP_VERSION,
             "model_path": MODEL_PATH,
             "model_available": os.path.exists(MODEL_PATH),
             "sequence_length_range": [MIN_LENGTH, MAX_LENGTH],
             "variant_modes": DESIGN_VARIANT_MODES,
+        }
+    )
+
+
+@app.route("/version", methods=["GET"])
+def version():
+    return jsonify(
+        {
+            "app": "AFPRED",
+            "version": APP_VERSION,
+            "reports_export_enabled": True,
+            "report_actions": [
+                "report_pack",
+                "variant_report_pack",
+                "utility_report_pack",
+            ],
         }
     )
 
