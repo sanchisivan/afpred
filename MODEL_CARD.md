@@ -15,12 +15,13 @@ AFPRED estimates whether short peptide sequences are likely to show antifungal a
 - Antifungal probability score from the trained Keras model.
 - Threshold-based class label.
 - Peptide descriptors for interpretation and prioritization.
-- Standalone peptide utility calculations when the user wants formula, mass, pI, charge, hydrophobicity, HeliQuest-like helix descriptors, Boman-like index, extinction coefficient, and liability flags without invoking the antifungal model.
+- Standalone peptide utility calculations when the user wants formula, mass, pI, charge, hydrophobicity, HeliQuest-like helix descriptors, Boman-like index, Chou-Fasman-style structure propensities, Guruprasad instability index, extinction coefficient, and liability flags without invoking the antifungal model.
 - Input QC messages for unsupported residue symbols, duplicate candidates, and notation that is outside the model representation.
 - Descriptor-based flags that help prioritize follow-up checks such as hemolysis, solubility, membrane activity, and sequence complexity.
-- On-demand exploratory in silico variant panels that reuse the same model and descriptors to compare simple substitutions or truncations against a parent sequence.
+- On-demand exploratory in silico variant panels that reuse the same model and descriptors to compare simple substitutions, adjacent double substitutions, charge controls, scramble controls, retro-inverso text proxies, or truncations against a parent sequence.
 - Property-only utility API for descriptor calculation without invoking the antifungal model.
-- Downloadable report packs with CSV/FASTA data, editable SVG plots, and self-contained HTML summaries for prediction, utility, and variant workflows; utility packs include descriptor maps, aggregation-risk plots, liability summaries, and residue-composition heatmaps.
+- Downloadable report packs with CSV/FASTA data, editable SVG plots, and self-contained HTML summaries for prediction, utility, and variant workflows; utility packs include descriptor maps, secondary/instability descriptors, aggregation-risk plots, liability summaries, and residue-composition heatmaps.
+- Batch comparison and sequence-clustering outputs to help identify related candidate families and reduce redundancy.
 - Position-level mutation suggestions that report the best predicted single-residue substitution for each position of the selected parent peptide.
 
 ## Current Decision Labels

@@ -921,6 +921,9 @@
           <div class="detail"><span>Hydrophobic moment</span><strong>{{ row.properties.hydrophobic_moment }}</strong></div>
           <div class="detail"><span>Hydrophobic</span><strong>{{ row.properties.hydrophobic_percent }}%</strong></div>
           <div class="detail"><span>Positive</span><strong>{{ row.properties.positive_percent }}%</strong></div>
+          <div class="detail"><span>Structure tendency</span><strong>{{ row.properties.dominant_secondary_propensity }}</strong></div>
+          <div class="detail"><span>Instability</span><strong>{{ row.properties.instability_index }} ({{ row.properties.instability_class }})</strong></div>
+          <div class="detail"><span>Boman-like index</span><strong>{{ row.properties.boman_index }}</strong></div>
           <div class="detail"><span>Ext. coef.</span><strong>{{ row.properties.extinction_reduced }} / {{ row.properties.extinction_oxidized }}</strong></div>
           <div class="detail"><span>Profile</span><strong>{{ row.properties.notes }}</strong></div>
         </div>
@@ -1260,7 +1263,7 @@
             <div class="mt-4 stack">
               <div class="callout context">
                 <span class="callout-title">Calculated properties</span>
-                <span class="callout-detail">Formula, mass, pI, pH charge profile, GRAVY/KD and Eisenberg hydrophobicity, hydrophobic moment, hydrophobic face angle, HeliQuest-like discriminant, Boman-like index, disorder fraction, aggregation flags, extinction coefficients, and composition.</span>
+                <span class="callout-detail">Formula, mass, pI, pH charge profile, GRAVY/KD and Eisenberg hydrophobicity, hydrophobic moment, secondary-structure propensities, instability index, Boman-like index, aggregation flags, extinction coefficients, and composition.</span>
               </div>
               <div class="callout caution">
                 <span class="callout-title">Scope</span>
@@ -1320,6 +1323,11 @@
                           <div class="detail"><span>Linear moment</span><strong>{{ row.properties.linear_hydrophobic_moment }}</strong></div>
                           <div class="detail"><span>Linear moment Ei</span><strong>{{ row.properties.linear_moment_eisenberg }}</strong></div>
                           <div class="detail"><span>Boman-like index</span><strong>{{ row.properties.boman_index }}</strong></div>
+                          <div class="detail"><span>Helix propensity</span><strong>{{ row.properties.helix_propensity }}</strong></div>
+                          <div class="detail"><span>Beta propensity</span><strong>{{ row.properties.beta_propensity }}</strong></div>
+                          <div class="detail"><span>Turn propensity</span><strong>{{ row.properties.turn_propensity }}</strong></div>
+                          <div class="detail"><span>Dominant structure</span><strong>{{ row.properties.dominant_secondary_propensity }}</strong></div>
+                          <div class="detail"><span>Instability index</span><strong>{{ row.properties.instability_index }} ({{ row.properties.instability_class }})</strong></div>
                           <div class="detail"><span>Disorder-promoting</span><strong>{{ row.properties.disorder_promoting_percent }}%</strong></div>
                           <div class="detail"><span>Aggregation risk</span><strong>{{ row.properties.aggregation_risk_score }}/6</strong></div>
                           <div class="detail"><span>Max hydrophobic run</span><strong>{{ row.properties.max_hydrophobic_run }}</strong></div>

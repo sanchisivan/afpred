@@ -1,4 +1,5 @@
 import csv
+import random
 import re
 from math import log2, pi
 
@@ -127,6 +128,72 @@ BOMAN_TRANSFER_FREE_ENERGY = {
     "W": 2.33,
     "Y": -0.14,
     "V": 4.04,
+}
+CHOU_FASMAN_ALPHA = {
+    "A": 1.45,
+    "C": 0.77,
+    "D": 0.98,
+    "E": 1.53,
+    "F": 1.12,
+    "G": 0.53,
+    "H": 1.24,
+    "I": 1.00,
+    "K": 1.07,
+    "L": 1.34,
+    "M": 1.20,
+    "N": 0.73,
+    "P": 0.59,
+    "Q": 1.17,
+    "R": 0.79,
+    "S": 0.79,
+    "T": 0.82,
+    "V": 1.14,
+    "W": 1.14,
+    "Y": 0.61,
+}
+CHOU_FASMAN_BETA = {
+    "A": 0.97,
+    "C": 1.30,
+    "D": 0.80,
+    "E": 0.26,
+    "F": 1.28,
+    "G": 0.81,
+    "H": 0.71,
+    "I": 1.60,
+    "K": 0.74,
+    "L": 1.22,
+    "M": 1.67,
+    "N": 0.65,
+    "P": 0.62,
+    "Q": 1.23,
+    "R": 0.90,
+    "S": 0.72,
+    "T": 1.20,
+    "V": 1.65,
+    "W": 1.19,
+    "Y": 1.29,
+}
+CHOU_FASMAN_TURN = {
+    "A": 0.66,
+    "C": 1.19,
+    "D": 1.46,
+    "E": 0.74,
+    "F": 0.60,
+    "G": 1.56,
+    "H": 0.95,
+    "I": 0.47,
+    "K": 1.01,
+    "L": 0.59,
+    "M": 0.60,
+    "N": 1.56,
+    "P": 1.52,
+    "Q": 0.98,
+    "R": 0.95,
+    "S": 1.43,
+    "T": 0.96,
+    "V": 0.50,
+    "W": 0.96,
+    "Y": 1.14,
 }
 
 HYDROPHOBIC_AA = set("AVILMFWYC")
@@ -405,6 +472,46 @@ def hydrophobic_moment(sequence, angle_degrees=100):
 
 def mean_scale(sequence, scale):
     return sum(scale[aa] for aa in sequence) / len(sequence)
+
+
+def secondary_structure_propensity(sequence):
+    alpha = mean_scale(sequence, CHOU_FASMAN_ALPHA)
+    beta = mean_scale(sequence, CHOU_FASMAN_BETA)
+    turn = mean_scale(sequence, CHOU_FASMAN_TURN)
+    scores = {
+        "helix": alpha,
+        "beta": beta,
+        "turn": turn,
+    }
+    dominant = max(scores, key=scores.get)
+    return {
+        "helix_propensity": round(alpha, 3),
+        "beta_propensity": round(beta, 3),
+        "turn_propensity": round(turn, 3),
+        "dominant_secondary_propensity": dominant,
+    }
+
+
+def instability_index(sequence):
+    try:
+        from Bio.SeqUtils import ProtParamData
+    except ImportError:
+        return {
+            "instability_index": None,
+            "instability_class": "unavailable",
+        }
+
+    if len(sequence) < 2:
+        value = 0.0
+    else:
+        value = 10.0 * sum(
+            ProtParamData.DIWV[sequence[index]][sequence[index + 1]]
+            for index in range(len(sequence) - 1)
+        ) / len(sequence)
+    return {
+        "instability_index": round(value, 2),
+        "instability_class": "unstable" if value > 40 else "stable",
+    }
 
 
 def residue_composition(counts, length):
@@ -759,6 +866,10 @@ def replace_at(sequence, index, residue):
     return sequence[:index] + residue + sequence[index + 1 :]
 
 
+def replace_span(sequence, index, residues):
+    return sequence[:index] + residues + sequence[index + len(residues) :]
+
+
 def generate_variants(sequence, mode="alanine_scan", max_variants=MAX_VARIANTS):
     seq = validate_sequence(sequence)
     variants = []
@@ -810,6 +921,24 @@ def generate_variants(sequence, mode="alanine_scan", max_variants=MAX_VARIANTS):
                     f"{aa}{index + 1}K",
                     "Increases cationic character at one position.",
                 )
+    elif mode == "arginine_scan":
+        for index, aa in enumerate(seq):
+            if aa != "R":
+                add_variant(
+                    f"Arg_{index + 1}_{aa}R",
+                    replace_at(seq, index, "R"),
+                    f"{aa}{index + 1}R",
+                    "Increases guanidinium/basic character at one position.",
+                )
+    elif mode == "proline_scan":
+        for index, aa in enumerate(seq):
+            if aa != "P":
+                add_variant(
+                    f"Pro_{index + 1}_{aa}P",
+                    replace_at(seq, index, "P"),
+                    f"{aa}{index + 1}P",
+                    "Introduces a proline kink to probe secondary-structure dependence.",
+                )
     elif mode == "hydrophobic_tempering":
         for index, aa in enumerate(seq):
             if aa in set("FWYILVM"):
@@ -819,6 +948,43 @@ def generate_variants(sequence, mode="alanine_scan", max_variants=MAX_VARIANTS):
                     f"{aa}{index + 1}A",
                     "Reduces hydrophobic/aromatic load to inspect selectivity risk.",
                 )
+    elif mode == "double_substitution":
+        replacement_pairs = ["KK", "RR", "AA", "PP", "WW", "DE"]
+        for index in range(len(seq) - 1):
+            original_pair = seq[index : index + 2]
+            for pair in replacement_pairs:
+                if pair != original_pair:
+                    add_variant(
+                        f"Double_{index + 1}_{original_pair}{pair}",
+                        replace_span(seq, index, pair),
+                        f"{original_pair}{index + 1}-{index + 2}{pair}",
+                        "Adjacent double-substitution panel to inspect local cooperativity.",
+                    )
+    elif mode == "scramble_control":
+        for scramble_index in range(1, max_variants + 1):
+            residues = list(seq)
+            random.Random(f"{seq}:{scramble_index}").shuffle(residues)
+            add_variant(
+                f"Scramble_{scramble_index}",
+                "".join(residues),
+                f"scramble {scramble_index}",
+                "Composition-preserving sequence-order control.",
+            )
+    elif mode in {"retro_inverse", "retro_inverso"}:
+        add_variant(
+            "Retro_inverse_text",
+            seq[::-1],
+            "retro-inverso text proxy",
+            "Reverse sequence proxy for retro-inverso design; D-amino-acid stereochemistry is not encoded in one-letter text.",
+        )
+    elif mode == "charge_inversion":
+        charge_swap = str.maketrans({"K": "E", "R": "D", "D": "R", "E": "K"})
+        add_variant(
+            "Charge_inversion",
+            seq.translate(charge_swap),
+            "charge inversion",
+            "Swaps basic and acidic residues to test charge-dependent signal.",
+        )
     elif mode == "terminal_truncation":
         for trim in range(1, min(5, len(seq) - MIN_LENGTH + 1)):
             add_variant(
@@ -936,6 +1102,8 @@ def peptide_properties(sequence):
         "terminal_profile": terminal_profile(seq),
         "chemical_liabilities": chemical_liabilities(seq),
     }
+    properties.update(secondary_structure_propensity(seq))
+    properties.update(instability_index(seq))
     properties["sliding_windows"] = sliding_window_profiles(seq)
     properties["hydrophobic_hotspot"] = hydrophobic_hotspot(properties["sliding_windows"])
     properties["charge_profile"] = charge_profile(seq)

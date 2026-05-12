@@ -9,12 +9,13 @@ AFPRED is a Flask web application for screening short peptide sequences with a t
 - Adjustable decision threshold.
 - CSV export of predictions and descriptors, clean FASTA export for valid sequences, and downloadable report packs with SVG plots plus a self-contained HTML report.
 - JSON API endpoints for prediction, variant exploration, and property-only utilities.
-- On-demand variant exploration endpoint for activity-boosting substitution scans, alanine scans, tryptophan scans, charge scans, hydrophobicity tempering, and terminal truncations.
+- On-demand variant exploration endpoint for activity-boosting substitution scans, alanine/tryptophan/lysine/arginine/proline scans, adjacent double substitutions, scramble controls, charge inversion, retro-inverso text proxies, hydrophobicity tempering, and terminal truncations.
 - Health endpoint for deployment monitoring.
 - Input QC for unsupported residues, terminal-modification text, duplicate sequences, and batch-level invalid records.
-- Peptide descriptors: length, molecular formula, approximate molecular weight, net charge at pH 7 and pH 5.5/7.4, charge density, estimated isoelectric point, GRAVY hydropathy, hydrophobic moment, aliphatic index, extinction coefficient, hydrophobic/positive/negative/polar residue percentage, aromaticity, cysteine count, sequence entropy, terminal profile, sliding-window profiles, composition, and profile tags.
+- Peptide descriptors: length, molecular formula, approximate molecular weight, net charge at pH 7 and pH 5.5/7.4, charge density, estimated isoelectric point, GRAVY hydropathy, hydrophobic moment, aliphatic index, Boman-like index, Chou-Fasman-style secondary-structure propensities, Guruprasad instability index, extinction coefficient, hydrophobic/positive/negative/polar residue percentage, aromaticity, cysteine count, sequence entropy, terminal profile, sliding-window profiles, composition, and profile tags.
 - Interpretation flags for membrane-active profiles, high hydrophobicity, low cationic character, aromatic enrichment, cysteine-rich candidates, basic residue clusters, and low-complexity sequences.
 - Descriptor-based screening tier to separate candidates to advance, review, or deprioritize.
+- Batch comparison plots and sequence-clustering tables for identifying candidate families and reducing redundancy beyond exact duplicates.
 - Position-level mutation summary for the best predicted single-residue substitution at each position of the selected parent peptide.
 - Variant CSV, FASTA, and report-pack exports with parent sequence, mutation, score delta, rationale, plots, and core descriptor fields.
 - A standalone Utilities tab for PepCalc-style calculations without running the antifungal model.
@@ -103,7 +104,7 @@ Example body:
 }
 ```
 
-Supported modes are `activity_optimization`, `alanine_scan`, `tryptophan_scan`, `lysine_scan`, `hydrophobic_tempering`, and `terminal_truncation`. Design utilities are not run automatically for large batches; first rank the library, then run a selected mutational analysis for the top-scoring valid parent.
+Supported modes are `activity_optimization`, `alanine_scan`, `tryptophan_scan`, `lysine_scan`, `arginine_scan`, `proline_scan`, `hydrophobic_tempering`, `double_substitution`, `scramble_control`, `retro_inverso`, `charge_inversion`, and `terminal_truncation`. Design utilities are not run automatically for large batches; first rank the library, then run a selected mutational analysis for the top-scoring valid parent.
 
 Property-only endpoint:
 
@@ -136,7 +137,7 @@ The prediction and design forms can export ZIP report packs. Each pack includes:
 - Editable SVG plots for score ranking, score distribution, charge/hydrophobicity mapping, and pH charge profiles.
 - CSV and FASTA data files for downstream analysis.
 - For variant report packs, a variant delta plot plus variant CSV/FASTA files.
-- Utility report packs add mass/pI, hydropathy/moment, aggregation-risk, chemical-liability, and residue-composition plots.
+- Utility report packs add mass/pI, hydropathy/moment, secondary-descriptor context, aggregation-risk, chemical-liability, and residue-composition plots. Prediction report packs also include batch comparison and sequence-clustering outputs.
 
 In the web app, these are in the highlighted **Plots & Reports** sections:
 

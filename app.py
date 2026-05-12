@@ -30,7 +30,7 @@ from utils import (
 
 
 MODEL_PATH = "antifungal_peptide_model.h5"
-APP_VERSION = "2026.05.12-report-exports"
+APP_VERSION = "2026.05.12-design-utilities"
 DEFAULT_VARIANT_MODE = "activity_optimization"
 DESIGN_ACTIONS = {"variants", "variant_download", "variant_fasta", "variant_report_pack"}
 REPORT_ACTIONS = {"report_pack", "variant_report_pack"}
@@ -41,7 +41,13 @@ VARIANT_MODES = {
     "alanine_scan": "Alanine scan",
     "tryptophan_scan": "Tryptophan scan",
     "lysine_scan": "Lysine charge scan",
+    "arginine_scan": "Arginine charge scan",
+    "proline_scan": "Proline structure-break scan",
     "hydrophobic_tempering": "Hydrophobic tempering",
+    "double_substitution": "Adjacent double-substitution panel",
+    "scramble_control": "Scramble composition control",
+    "retro_inverso": "Retro-inverso text proxy",
+    "charge_inversion": "Charge inversion control",
     "terminal_truncation": "Terminal truncation",
 }
 DESIGN_VARIANT_MODES = {
@@ -307,6 +313,13 @@ def results_to_csv(results):
         "polar_percent",
         "aromaticity",
         "sequence_entropy",
+        "helix_propensity",
+        "beta_propensity",
+        "turn_propensity",
+        "dominant_secondary_propensity",
+        "instability_index",
+        "instability_class",
+        "boman_index",
         "extinction_reduced",
         "extinction_oxidized",
         "absorbance_0_1_percent_reduced",
@@ -353,6 +366,13 @@ def results_to_csv(results):
                 "polar_percent": properties.get("polar_percent"),
                 "aromaticity": properties.get("aromaticity"),
                 "sequence_entropy": properties.get("sequence_entropy"),
+                "helix_propensity": properties.get("helix_propensity"),
+                "beta_propensity": properties.get("beta_propensity"),
+                "turn_propensity": properties.get("turn_propensity"),
+                "dominant_secondary_propensity": properties.get("dominant_secondary_propensity"),
+                "instability_index": properties.get("instability_index"),
+                "instability_class": properties.get("instability_class"),
+                "boman_index": properties.get("boman_index"),
                 "extinction_reduced": properties.get("extinction_reduced"),
                 "extinction_oxidized": properties.get("extinction_oxidized"),
                 "absorbance_0_1_percent_reduced": properties.get("absorbance_0_1_percent_reduced"),
@@ -434,6 +454,13 @@ def variant_results_to_csv(parent_result, variant_results):
         "hydrophobic_moment",
         "hydrophobic_percent",
         "positive_percent",
+        "helix_propensity",
+        "beta_propensity",
+        "turn_propensity",
+        "dominant_secondary_propensity",
+        "instability_index",
+        "instability_class",
+        "boman_index",
         "chemical_liabilities",
     ]
     writer = csv.DictWriter(output, fieldnames=fieldnames)
@@ -470,6 +497,13 @@ def variant_results_to_csv(parent_result, variant_results):
                 "hydrophobic_moment": properties.get("hydrophobic_moment"),
                 "hydrophobic_percent": properties.get("hydrophobic_percent"),
                 "positive_percent": properties.get("positive_percent"),
+                "helix_propensity": properties.get("helix_propensity"),
+                "beta_propensity": properties.get("beta_propensity"),
+                "turn_propensity": properties.get("turn_propensity"),
+                "dominant_secondary_propensity": properties.get("dominant_secondary_propensity"),
+                "instability_index": properties.get("instability_index"),
+                "instability_class": properties.get("instability_class"),
+                "boman_index": properties.get("boman_index"),
                 "chemical_liabilities": " | ".join(
                     item["title"] for item in properties.get("chemical_liabilities", [])
                 ),
@@ -497,6 +531,100 @@ def clean_plot_label(value, max_length=34):
 
 def valid_rows(rows):
     return [row for row in rows if row.get("properties")]
+
+
+def levenshtein_distance(left, right):
+    if left == right:
+        return 0
+    if len(left) < len(right):
+        left, right = right, left
+    previous = list(range(len(right) + 1))
+    for left_index, left_char in enumerate(left, start=1):
+        current = [left_index]
+        for right_index, right_char in enumerate(right, start=1):
+            insert_cost = current[right_index - 1] + 1
+            delete_cost = previous[right_index] + 1
+            replace_cost = previous[right_index - 1] + (left_char != right_char)
+            current.append(min(insert_cost, delete_cost, replace_cost))
+        previous = current
+    return previous[-1]
+
+
+def normalized_sequence_distance(left, right):
+    longest = max(len(left), len(right), 1)
+    return levenshtein_distance(left, right) / longest
+
+
+def batch_sequence_clusters(results, cutoff=0.25):
+    rows = [row for row in results if row.get("sequence")]
+    clusters = []
+    cluster_rows = []
+
+    for row in rows:
+        sequence = row["sequence"]
+        best_cluster = None
+        best_distance = None
+        for cluster in clusters:
+            distance = normalized_sequence_distance(sequence, cluster["representative_sequence"])
+            if best_distance is None or distance < best_distance:
+                best_distance = distance
+                best_cluster = cluster
+
+        if best_cluster is None or best_distance is None or best_distance > cutoff:
+            best_cluster = {
+                "cluster_id": f"cluster_{len(clusters) + 1}",
+                "representative_id": row["id"],
+                "representative_sequence": sequence,
+                "members": [],
+            }
+            clusters.append(best_cluster)
+            best_distance = 0.0
+
+        best_cluster["members"].append(row["id"])
+        cluster_rows.append(
+            {
+                "id": row["id"],
+                "sequence": sequence,
+                "cluster_id": best_cluster["cluster_id"],
+                "representative_id": best_cluster["representative_id"],
+                "distance_to_representative": round(best_distance, 3),
+                "probability_percent": row.get("probability_percent"),
+                "classification": row.get("classification"),
+            }
+        )
+
+    cluster_sizes = {
+        cluster["cluster_id"]: len(cluster["members"])
+        for cluster in clusters
+    }
+    for row in cluster_rows:
+        row["cluster_size"] = cluster_sizes[row["cluster_id"]]
+
+    return {
+        "cutoff": cutoff,
+        "clusters": clusters,
+        "rows": cluster_rows,
+    }
+
+
+def sequence_clusters_to_csv(results):
+    cluster_data = batch_sequence_clusters(results)
+    output = io.StringIO()
+    fieldnames = [
+        "id",
+        "sequence",
+        "cluster_id",
+        "cluster_size",
+        "representative_id",
+        "distance_to_representative",
+        "probability_percent",
+        "classification",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in cluster_data["rows"]:
+        writer.writerow(row)
+    return output.getvalue()
 
 
 def no_data_svg(title, detail="No valid rows available for this plot.", width=880, height=260):
@@ -1002,6 +1130,49 @@ def residue_composition_heatmap_svg(results):
     )
 
 
+def sequence_cluster_svg(results):
+    cluster_data = batch_sequence_clusters(results)
+    clusters = cluster_data["clusters"]
+    if not clusters:
+        return no_data_svg("Sequence clustering", "No valid sequences available for clustering.")
+
+    cluster_rows = sorted(
+        [
+            {
+                "cluster_id": cluster["cluster_id"],
+                "representative_id": cluster["representative_id"],
+                "size": len(cluster["members"]),
+            }
+            for cluster in clusters
+        ],
+        key=lambda row: row["size"],
+        reverse=True,
+    )[:25]
+    width = 900
+    top = 88
+    row_gap = 32
+    height = top + len(cluster_rows) * row_gap + 52
+    left = 190
+    right = 70
+    plot_width = width - left - right
+    max_size = max(row["size"] for row in cluster_rows)
+    parts = []
+    for index, row in enumerate(cluster_rows):
+        y = top + index * row_gap
+        bar_width = max(4, plot_width * row["size"] / max_size)
+        parts.append(f'<text x="34" y="{y + 14}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="12">{clean_plot_label(row["cluster_id"])}</text>')
+        parts.append(f'<rect x="{left}" y="{y}" width="{bar_width:.1f}" height="18" rx="5" fill="#118ab2"/>')
+        parts.append(f'<text x="{left + bar_width + 8:.1f}" y="{y + 14}" fill="#edf4fb" font-family="Arial, sans-serif" font-size="12">{row["size"]} | rep {clean_plot_label(row["representative_id"], 18)}</text>')
+
+    return plot_shell(
+        "Sequence clustering",
+        f"Greedy Levenshtein clustering at normalized distance <= {cluster_data['cutoff']}.",
+        width,
+        height,
+        "\n  ".join(parts),
+    )
+
+
 def variant_delta_svg(variant_results):
     rows = [
         row
@@ -1059,6 +1230,8 @@ def build_prediction_plots(results, threshold, variant_results=None):
         "score_ranking.svg": score_ranking_svg(results, threshold),
         "score_distribution.svg": score_distribution_svg(results),
         "charge_hydrophobicity_map.svg": property_map_svg(results),
+        "batch_comparison_gravy_moment.svg": hydropathy_moment_svg(results),
+        "sequence_clusters.svg": sequence_cluster_svg(results),
         "charge_profiles.svg": charge_profiles_svg(results),
     }
     if variant_results:
@@ -1135,6 +1308,17 @@ def build_prediction_report_html(
             ("Hydrophobic %", lambda row: row.get("properties", {}).get("hydrophobic_percent")),
         ],
     )
+    cluster_table = report_table(
+        batch_sequence_clusters(results)["rows"][:30],
+        [
+            ("ID", lambda row: row.get("id")),
+            ("Cluster", lambda row: row.get("cluster_id")),
+            ("Size", lambda row: row.get("cluster_size")),
+            ("Representative", lambda row: row.get("representative_id")),
+            ("Distance", lambda row: row.get("distance_to_representative")),
+            ("Score %", lambda row: row.get("probability_percent")),
+        ],
+    )
 
     variant_section = ""
     if variant_results:
@@ -1209,6 +1393,10 @@ def build_prediction_report_html(
       <h2>Top Candidate Table</h2>
       {top_table}
     </section>
+    <section>
+      <h2>Sequence Clustering</h2>
+      {cluster_table}
+    </section>
     {variant_section}
     <section>
       <h2>Scope Note</h2>
@@ -1237,6 +1425,7 @@ def build_report_pack(results, summary, threshold, variant_parent=None, variant_
         archive.writestr("afpred_report.html", report_html)
         archive.writestr("data/afpred_predictions.csv", results_to_csv(results))
         archive.writestr("data/afpred_predictions.fasta", results_to_fasta(results))
+        archive.writestr("data/sequence_clusters.csv", sequence_clusters_to_csv(results))
         for filename, svg in plots.items():
             archive.writestr(f"plots/{filename}", svg)
         if variant_results:
@@ -1273,6 +1462,8 @@ def build_utility_report_html(results, summary, plots):
             ("Charge", lambda row: row.get("properties", {}).get("net_charge")),
             ("GRAVY", lambda row: row.get("properties", {}).get("gravy")),
             ("Hydrophobic %", lambda row: row.get("properties", {}).get("hydrophobic_percent")),
+            ("Secondary", lambda row: row.get("properties", {}).get("dominant_secondary_propensity")),
+            ("Instability", lambda row: row.get("properties", {}).get("instability_index")),
             ("Notes", lambda row: row.get("properties", {}).get("notes")),
         ],
     )
@@ -1411,6 +1602,12 @@ def utility_results_to_csv(results):
         "linear_hydrophobic_moment",
         "linear_moment_eisenberg",
         "boman_index",
+        "helix_propensity",
+        "beta_propensity",
+        "turn_propensity",
+        "dominant_secondary_propensity",
+        "instability_index",
+        "instability_class",
         "disorder_promoting_percent",
         "max_hydrophobic_run",
         "max_beta_aggregation_run",
@@ -1459,6 +1656,12 @@ def utility_results_to_csv(results):
                 "linear_hydrophobic_moment": properties.get("linear_hydrophobic_moment"),
                 "linear_moment_eisenberg": properties.get("linear_moment_eisenberg"),
                 "boman_index": properties.get("boman_index"),
+                "helix_propensity": properties.get("helix_propensity"),
+                "beta_propensity": properties.get("beta_propensity"),
+                "turn_propensity": properties.get("turn_propensity"),
+                "dominant_secondary_propensity": properties.get("dominant_secondary_propensity"),
+                "instability_index": properties.get("instability_index"),
+                "instability_class": properties.get("instability_class"),
                 "disorder_promoting_percent": properties.get("disorder_promoting_percent"),
                 "max_hydrophobic_run": properties.get("max_hydrophobic_run"),
                 "max_beta_aggregation_run": properties.get("max_beta_aggregation_run"),
