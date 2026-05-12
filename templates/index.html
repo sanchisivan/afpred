@@ -323,7 +323,7 @@
     .action-section {
       display: grid;
       gap: 8px;
-      padding: 12px;
+      padding: 10px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: rgba(255, 255, 255, 0.025);
@@ -335,8 +335,8 @@
     }
 
     .action-section.report-action {
-      border-color: rgba(255, 209, 102, 0.42);
-      background: var(--gold-soft);
+      border-color: var(--line);
+      background: rgba(8, 17, 31, 0.22);
     }
 
     .action-title {
@@ -346,6 +346,31 @@
       font-weight: 900;
       letter-spacing: 1px;
       text-transform: uppercase;
+    }
+
+    .compact-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .compact-actions.single {
+      grid-template-columns: 1fr;
+    }
+
+    .compact-actions .btn {
+      min-height: 38px;
+      padding: 8px 10px;
+      font-size: 11px;
+      letter-spacing: 0.4px;
+      text-transform: none;
+    }
+
+    .export-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.35;
     }
 
     .quick-grid,
@@ -1005,10 +1030,12 @@
                 </div>
 
                 <div class="action-section report-action">
-                  <span class="action-title">Plots & reports</span>
-                  <button type="submit" name="action" value="report_pack" class="btn btn-outline-secondary">Download Prediction Plot Report ZIP</button>
-                  <button type="submit" name="action" value="variant_report_pack" class="btn btn-outline-secondary">Download Variant Plot Report ZIP</button>
-                  <div class="form-text">ZIP exports include a self-contained HTML report, editable SVG plots, CSV files, and FASTA files.</div>
+                  <span class="action-title">Reports</span>
+                  <div class="compact-actions">
+                    <button type="submit" name="action" value="report_pack" class="btn btn-outline-secondary">Prediction ZIP</button>
+                    <button type="submit" name="action" value="variant_report_pack" class="btn btn-outline-secondary">Variant ZIP</button>
+                  </div>
+                  <p class="export-note">HTML report, SVG plots, CSV, and FASTA.</p>
                 </div>
 
                 <div class="action-section">
@@ -1216,9 +1243,11 @@
                 </div>
 
                 <div class="action-section report-action">
-                  <span class="action-title">Plots & reports</span>
-                  <button type="submit" name="action" value="utility_report_pack" class="btn btn-outline-secondary">Download Utility Plot Report ZIP</button>
-                  <div class="form-text">ZIP export includes an HTML report, descriptor CSV, and SVG plots for charge, hydrophobicity, mass, pI, aggregation risk, liability flags, and residue composition.</div>
+                  <span class="action-title">Reports</span>
+                  <div class="compact-actions single">
+                    <button type="submit" name="action" value="utility_report_pack" class="btn btn-outline-secondary">Utility ZIP</button>
+                  </div>
+                  <p class="export-note">HTML report, descriptor CSV, and SVG plots.</p>
                 </div>
 
                 <div class="action-section">
@@ -1346,11 +1375,11 @@
           <div class="panel-body stack">
             <div class="callout signal">
               <span class="callout-title">Where to export plots</span>
-              <span class="callout-detail">Use the Predict tab, then open the highlighted Plots & Reports box under the sequence form. Use Download Prediction Plot Report ZIP for screening plots, or Download Variant Plot Report ZIP after choosing a variant utility.</span>
+              <span class="callout-detail">Use the compact Reports box in Predict for screening or variant ZIPs.</span>
             </div>
             <div class="callout context">
               <span class="callout-title">Utility report packs</span>
-              <span class="callout-detail">Use the Utilities tab and the highlighted Plots & Reports box to export descriptor plots without running the antifungal model.</span>
+              <span class="callout-detail">Use the compact Reports box in Utilities for descriptor plots without running the model.</span>
             </div>
             <div class="callout context">
               <span class="callout-title">Accepted formats</span>
