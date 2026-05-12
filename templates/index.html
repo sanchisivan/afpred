@@ -610,6 +610,163 @@
       overflow-wrap: anywhere;
     }
 
+    .utility-dashboard {
+      display: grid;
+      gap: 14px;
+      padding: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .utility-snapshot {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .snapshot-item {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .snapshot-item span,
+    .kv span {
+      display: block;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .snapshot-item strong {
+      display: block;
+      margin-top: 6px;
+      color: var(--text);
+      font-size: 1.15rem;
+      overflow-wrap: anywhere;
+    }
+
+    .utility-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .utility-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.025);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .utility-chip.signal {
+      border-color: rgba(6, 214, 160, 0.35);
+      color: var(--cyan);
+      background: var(--green-soft);
+    }
+
+    .utility-chip.caution {
+      border-color: rgba(255, 209, 102, 0.35);
+      color: var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .utility-chip.context {
+      border-color: rgba(17, 138, 178, 0.35);
+      color: #93d9ef;
+      background: var(--blue-soft);
+    }
+
+    .utility-section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .utility-section {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(8, 17, 31, 0.24);
+    }
+
+    .utility-section h4 {
+      margin: 0;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: rgba(8, 17, 31, 0.38);
+    }
+
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .kv {
+      min-width: 0;
+      padding: 10px 12px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .kv:nth-child(2n) { border-right: 0; }
+    .kv:nth-last-child(-n+2) { border-bottom: 0; }
+
+    .kv strong {
+      display: block;
+      margin-top: 5px;
+      color: var(--text);
+      font-size: 0.95rem;
+      overflow-wrap: anywhere;
+    }
+
+    .utility-details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      overflow: hidden;
+    }
+
+    .utility-details summary {
+      cursor: pointer;
+      padding: 11px 12px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+      background: rgba(8, 17, 31, 0.34);
+    }
+
+    .utility-details-body {
+      padding: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+    }
+
     .analysis-grid {
       display: grid;
       grid-template-columns: minmax(0, 0.95fr) minmax(280px, 1.05fr);
@@ -858,6 +1015,11 @@
       }
       .detail-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .utility-snapshot,
+      .utility-section-grid,
+      .profile-grid {
+        grid-template-columns: 1fr;
       }
       .detail:nth-child(5n) { border-right: 1px solid var(--line); }
       .detail:nth-child(2n) { border-right: 0; }
@@ -1305,58 +1467,128 @@
                     </div>
                     {% if row.properties %}
                       <div class="result-details">
-                        <div class="detail-grid">
-                          <div class="detail"><span>Formula</span><strong>{{ row.properties.formula }}</strong></div>
-                          <div class="detail"><span>Mass</span><strong>{{ row.properties.molecular_weight }} Da</strong></div>
-                          <div class="detail"><span>pI</span><strong>{{ row.properties.isoelectric_point }}</strong></div>
-                          <div class="detail"><span>Net charge simple</span><strong>{{ row.properties.net_charge }}</strong></div>
-                          <div class="detail"><span>Charge pH 5.5</span><strong>{{ row.properties.charge_ph_5_5 }}</strong></div>
-                          <div class="detail"><span>Charge pH 7.0</span><strong>{{ row.properties.charge_ph_7_0 }}</strong></div>
-                          <div class="detail"><span>Charge pH 7.4</span><strong>{{ row.properties.charge_ph_7_4 }}</strong></div>
-                          <div class="detail"><span>KD hydrophobicity</span><strong>{{ row.properties.gravy }}</strong></div>
-                          <div class="detail"><span>Hydrophobic moment</span><strong>{{ row.properties.hydrophobic_moment }}</strong></div>
-                          <div class="detail"><span>Normalized HM</span><strong>{{ row.properties.normalized_hydrophobic_moment_kd }}</strong></div>
-                          <div class="detail"><span>Eisenberg H</span><strong>{{ row.properties.eisenberg_hydrophobicity }}</strong></div>
-                          <div class="detail"><span>Eisenberg HM</span><strong>{{ row.properties.eisenberg_hydrophobic_moment }}</strong></div>
-                          <div class="detail"><span>HeliQuest-like D</span><strong>{{ row.properties.heliquest_like_discriminant }}</strong></div>
-                          <div class="detail"><span>Hydrophobic face angle</span><strong>{{ row.properties.hydrophobic_face_angle }} deg</strong></div>
-                          <div class="detail"><span>Linear moment</span><strong>{{ row.properties.linear_hydrophobic_moment }}</strong></div>
-                          <div class="detail"><span>Linear moment Ei</span><strong>{{ row.properties.linear_moment_eisenberg }}</strong></div>
-                          <div class="detail"><span>Boman-like index</span><strong>{{ row.properties.boman_index }}</strong></div>
-                          <div class="detail"><span>Helix propensity</span><strong>{{ row.properties.helix_propensity }}</strong></div>
-                          <div class="detail"><span>Beta propensity</span><strong>{{ row.properties.beta_propensity }}</strong></div>
-                          <div class="detail"><span>Turn propensity</span><strong>{{ row.properties.turn_propensity }}</strong></div>
-                          <div class="detail"><span>Dominant structure</span><strong>{{ row.properties.dominant_secondary_propensity }}</strong></div>
-                          <div class="detail"><span>Instability index</span><strong>{{ row.properties.instability_index }} ({{ row.properties.instability_class }})</strong></div>
-                          <div class="detail"><span>Disorder-promoting</span><strong>{{ row.properties.disorder_promoting_percent }}%</strong></div>
-                          <div class="detail"><span>Aggregation risk</span><strong>{{ row.properties.aggregation_risk_score }}/6</strong></div>
-                          <div class="detail"><span>Max hydrophobic run</span><strong>{{ row.properties.max_hydrophobic_run }}</strong></div>
-                          <div class="detail"><span>Basic / acidic</span><strong>{{ row.properties.basic_residue_count }} / {{ row.properties.acidic_residue_count }}</strong></div>
-                          <div class="detail"><span>Aliphatic index</span><strong>{{ row.properties.aliphatic_index }}</strong></div>
-                          <div class="detail"><span>Extinction 280 reduced</span><strong>{{ row.properties.extinction_reduced }}</strong></div>
-                          <div class="detail"><span>Extinction 280 oxidized</span><strong>{{ row.properties.extinction_oxidized }}</strong></div>
-                          <div class="detail"><span>Hydrophobic hotspot</span><strong>{{ row.properties.hydrophobic_hotspot.fragment }} ({{ row.properties.hydrophobic_hotspot.start }}-{{ row.properties.hydrophobic_hotspot.end }})</strong></div>
-                          <div class="detail"><span>Lipid-binding flag</span><strong>{% if row.properties.heliquest_like_lipid_binding %}yes{% else %}no{% endif %}</strong></div>
-                          <div class="detail"><span>TM-like H flag</span><strong>{% if row.properties.heliquest_like_transmembrane %}yes{% else %}no{% endif %}</strong></div>
-                        </div>
-                        <div class="subpanel mt-3">
-                          <h3 class="subpanel-title">Charge profile</h3>
-                          <div class="detail-grid">
-                            {% for point in row.properties.charge_profile %}
-                              <div class="detail"><span>pH {{ point.ph }}</span><strong>{{ point.charge }}</strong></div>
-                            {% endfor %}
+                        <div class="utility-dashboard">
+                          <div class="utility-snapshot">
+                            <div class="snapshot-item"><span>Mass</span><strong>{{ row.properties.molecular_weight }} Da</strong></div>
+                            <div class="snapshot-item"><span>pI</span><strong>{{ row.properties.isoelectric_point }}</strong></div>
+                            <div class="snapshot-item"><span>Charge pH 7</span><strong>{{ row.properties.charge_ph_7_0 }}</strong></div>
+                            <div class="snapshot-item"><span>Structure</span><strong>{{ row.properties.dominant_secondary_propensity }}</strong></div>
+                            <div class="snapshot-item"><span>Stability</span><strong>{{ row.properties.instability_class }}</strong></div>
                           </div>
-                        </div>
-                        <div class="subpanel mt-3">
-                          <h3 class="subpanel-title">Chemical liability screen</h3>
-                          <ul class="alert-list">
-                            {% for item in row.properties.chemical_liabilities %}
-                              <li class="callout {{ item.kind }}">
-                                <span class="callout-title">{{ item.title }}</span>
-                                <span class="callout-detail">{{ item.detail }}</span>
-                              </li>
-                            {% endfor %}
-                          </ul>
+
+                          <div class="utility-chips" aria-label="Utility interpretation summary">
+                            {% if row.properties.net_charge >= 1 %}
+                              <span class="utility-chip signal">Cationic at neutral pH</span>
+                            {% elif row.properties.net_charge <= -1 %}
+                              <span class="utility-chip caution">Anionic at neutral pH</span>
+                            {% else %}
+                              <span class="utility-chip context">Near-neutral charge</span>
+                            {% endif %}
+                            {% if row.properties.hydrophobic_moment >= 0.35 %}
+                              <span class="utility-chip signal">Amphipathic signal</span>
+                            {% else %}
+                              <span class="utility-chip context">Weak amphipathic signal</span>
+                            {% endif %}
+                            {% if row.properties.aggregation_risk_score >= 4 %}
+                              <span class="utility-chip caution">Aggregation watch</span>
+                            {% elif row.properties.aggregation_risk_score >= 2 %}
+                              <span class="utility-chip context">Moderate aggregation flags</span>
+                            {% else %}
+                              <span class="utility-chip signal">Low simple aggregation flags</span>
+                            {% endif %}
+                            {% if row.properties.instability_class == "unstable" %}
+                              <span class="utility-chip caution">Instability index high</span>
+                            {% else %}
+                              <span class="utility-chip signal">Instability index stable</span>
+                            {% endif %}
+                          </div>
+
+                          <div class="utility-section-grid">
+                            <section class="utility-section">
+                              <h4>Identity</h4>
+                              <div class="kv-grid">
+                                <div class="kv"><span>Formula</span><strong>{{ row.properties.formula }}</strong></div>
+                                <div class="kv"><span>Length</span><strong>{{ row.properties.length }} aa</strong></div>
+                                <div class="kv"><span>Aliphatic index</span><strong>{{ row.properties.aliphatic_index }}</strong></div>
+                                <div class="kv"><span>Extinction 280</span><strong>{{ row.properties.extinction_reduced }} / {{ row.properties.extinction_oxidized }}</strong></div>
+                              </div>
+                            </section>
+
+                            <section class="utility-section">
+                              <h4>Charge</h4>
+                              <div class="kv-grid">
+                                <div class="kv"><span>Simple net</span><strong>{{ row.properties.net_charge }}</strong></div>
+                                <div class="kv"><span>Density</span><strong>{{ row.properties.charge_density }}</strong></div>
+                                <div class="kv"><span>pH 5.5</span><strong>{{ row.properties.charge_ph_5_5 }}</strong></div>
+                                <div class="kv"><span>Basic / acidic</span><strong>{{ row.properties.basic_residue_count }} / {{ row.properties.acidic_residue_count }}</strong></div>
+                              </div>
+                            </section>
+
+                            <section class="utility-section">
+                              <h4>Membrane Profile</h4>
+                              <div class="kv-grid">
+                                <div class="kv"><span>GRAVY</span><strong>{{ row.properties.gravy }}</strong></div>
+                                <div class="kv"><span>Hydrophobic</span><strong>{{ row.properties.hydrophobic_percent }}%</strong></div>
+                                <div class="kv"><span>Hydrophobic moment</span><strong>{{ row.properties.hydrophobic_moment }}</strong></div>
+                                <div class="kv"><span>Boman-like</span><strong>{{ row.properties.boman_index }}</strong></div>
+                              </div>
+                            </section>
+
+                            <section class="utility-section">
+                              <h4>Structure & Stability</h4>
+                              <div class="kv-grid">
+                                <div class="kv"><span>Helix / beta / turn</span><strong>{{ row.properties.helix_propensity }} / {{ row.properties.beta_propensity }} / {{ row.properties.turn_propensity }}</strong></div>
+                                <div class="kv"><span>Instability index</span><strong>{{ row.properties.instability_index }}</strong></div>
+                                <div class="kv"><span>Disorder-promoting</span><strong>{{ row.properties.disorder_promoting_percent }}%</strong></div>
+                                <div class="kv"><span>Aggregation risk</span><strong>{{ row.properties.aggregation_risk_score }}/6</strong></div>
+                              </div>
+                            </section>
+                          </div>
+
+                          <details class="utility-details">
+                            <summary>Charge profile</summary>
+                            <div class="utility-details-body">
+                              <div class="profile-grid">
+                                {% for point in row.properties.charge_profile %}
+                                  <div class="kv"><span>pH {{ point.ph }}</span><strong>{{ point.charge }}</strong></div>
+                                {% endfor %}
+                              </div>
+                            </div>
+                          </details>
+
+                          <details class="utility-details">
+                            <summary>Advanced descriptors</summary>
+                            <div class="utility-details-body">
+                              <div class="detail-grid">
+                                <div class="detail"><span>Normalized HM</span><strong>{{ row.properties.normalized_hydrophobic_moment_kd }}</strong></div>
+                                <div class="detail"><span>Eisenberg H</span><strong>{{ row.properties.eisenberg_hydrophobicity }}</strong></div>
+                                <div class="detail"><span>Eisenberg HM</span><strong>{{ row.properties.eisenberg_hydrophobic_moment }}</strong></div>
+                                <div class="detail"><span>HeliQuest-like D</span><strong>{{ row.properties.heliquest_like_discriminant }}</strong></div>
+                                <div class="detail"><span>Hydrophobic face</span><strong>{{ row.properties.hydrophobic_face_angle }} deg</strong></div>
+                                <div class="detail"><span>Linear moment</span><strong>{{ row.properties.linear_hydrophobic_moment }}</strong></div>
+                                <div class="detail"><span>Linear moment Ei</span><strong>{{ row.properties.linear_moment_eisenberg }}</strong></div>
+                                <div class="detail"><span>Max hydrophobic run</span><strong>{{ row.properties.max_hydrophobic_run }}</strong></div>
+                                <div class="detail"><span>Hydrophobic hotspot</span><strong>{{ row.properties.hydrophobic_hotspot.fragment }} ({{ row.properties.hydrophobic_hotspot.start }}-{{ row.properties.hydrophobic_hotspot.end }})</strong></div>
+                                <div class="detail"><span>Lipid-binding flag</span><strong>{% if row.properties.heliquest_like_lipid_binding %}yes{% else %}no{% endif %}</strong></div>
+                                <div class="detail"><span>TM-like H flag</span><strong>{% if row.properties.heliquest_like_transmembrane %}yes{% else %}no{% endif %}</strong></div>
+                                <div class="detail"><span>Aromaticity</span><strong>{{ row.properties.aromaticity }}</strong></div>
+                              </div>
+                            </div>
+                          </details>
+
+                          <details class="utility-details">
+                            <summary>Chemical liability screen</summary>
+                            <div class="utility-details-body">
+                              <ul class="alert-list">
+                                {% for item in row.properties.chemical_liabilities %}
+                                  <li class="callout {{ item.kind }}">
+                                    <span class="callout-title">{{ item.title }}</span>
+                                    <span class="callout-detail">{{ item.detail }}</span>
+                                  </li>
+                                {% endfor %}
+                              </ul>
+                            </div>
+                          </details>
                         </div>
                       </div>
                     {% endif %}

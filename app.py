@@ -30,7 +30,7 @@ from utils import (
 
 
 MODEL_PATH = "antifungal_peptide_model.h5"
-APP_VERSION = "2026.05.12-design-utilities"
+APP_VERSION = "2026.05.12-utility-dashboard"
 DEFAULT_VARIANT_MODE = "activity_optimization"
 DESIGN_ACTIONS = {"variants", "variant_download", "variant_fasta", "variant_report_pack"}
 REPORT_ACTIONS = {"report_pack", "variant_report_pack"}
