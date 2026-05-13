@@ -30,11 +30,17 @@ from utils import (
 
 
 MODEL_PATH = "antifungal_peptide_model.h5"
-APP_VERSION = "2026.05.13-no-reports-export-tab"
+APP_VERSION = "2026.05.13-paper-properties-export"
 DEFAULT_VARIANT_MODE = "activity_optimization"
 DESIGN_ACTIONS = {"variants", "variant_download", "variant_fasta", "variant_report_pack"}
 REPORT_ACTIONS = {"report_pack", "variant_report_pack"}
-UTILITY_ACTIONS = {"utilities", "utility_download", "utility_report_pack"}
+PAPER_TABLE_ACTION = "paper_table_download"
+UTILITY_PAPER_TABLE_ACTION = "utility_paper_table_download"
+UTILITY_ACTIONS = {"utilities", "utility_download", "utility_report_pack", UTILITY_PAPER_TABLE_ACTION}
+PAPER_TABLE_SCOPE_NOTE = (
+    "Computed from linear canonical amino-acid sequence only; external ADMET, toxicity, "
+    "allergenicity, hemolysis, CPP, docking, and experimental activity values are not included."
+)
 VARIANT_MODES = {
     "none": "Prediction only",
     "activity_optimization": "Activity-boosting substitution scan",
@@ -349,6 +355,172 @@ def results_to_csv(results):
                 "notes": properties.get("notes"),
                 "alerts": " | ".join(alert["title"] for alert in properties.get("alerts", [])),
                 "error": row["error"],
+            }
+        )
+
+    return output.getvalue()
+
+
+def paper_table_liability_titles(properties):
+    titles = [item["title"] for item in properties.get("chemical_liabilities", [])]
+    if not titles:
+        titles = [item["title"] for item in properties.get("alerts", [])]
+    return " | ".join(titles)
+
+
+def paper_properties_to_csv(rows):
+    output = io.StringIO()
+    fieldnames = [
+        "id",
+        "sequence",
+        "status",
+        "afpred_probability",
+        "afpred_probability_percent",
+        "afpred_classification",
+        "afpred_rank",
+        "screening_tier",
+        "afp_feature_score",
+        "screening_liabilities",
+        "length_aa",
+        "molecular_formula",
+        "molecular_weight_da",
+        "net_charge_approx_pH7",
+        "charge_pH5_5",
+        "charge_pH7_0",
+        "charge_pH7_4",
+        "charge_density",
+        "theoretical_pI",
+        "gravy_kd_hydropathy",
+        "hydrophobicity_kd_mean",
+        "eisenberg_hydrophobicity_mean",
+        "hydrophobic_percent",
+        "hydrophobic_moment_kd",
+        "normalized_hydrophobic_moment_kd",
+        "eisenberg_hydrophobic_moment",
+        "hydrophobic_face_angle_deg",
+        "linear_hydrophobic_moment_kd",
+        "linear_hydrophobic_moment_eisenberg",
+        "aliphatic_index",
+        "boman_index_kcal_per_mol",
+        "instability_index",
+        "instability_class",
+        "estimated_half_life_mammalian_reticulocytes_in_vitro",
+        "estimated_half_life_yeast_in_vivo",
+        "estimated_half_life_ecoli_in_vivo",
+        "helix_propensity",
+        "beta_propensity",
+        "turn_propensity",
+        "dominant_secondary_propensity",
+        "aromaticity_fraction",
+        "cysteine_count",
+        "positive_percent",
+        "negative_percent",
+        "polar_percent",
+        "basic_residue_count",
+        "acidic_residue_count",
+        "basic_to_acidic_ratio",
+        "sequence_entropy",
+        "disorder_promoting_percent",
+        "max_hydrophobic_run",
+        "max_beta_aggregation_run",
+        "aggregation_risk_score",
+        "extinction_coefficient_reduced",
+        "extinction_coefficient_oxidized",
+        "absorbance_0_1_percent_reduced",
+        "absorbance_0_1_percent_oxidized",
+        "heliquest_like_discriminant",
+        "heliquest_like_lipid_binding",
+        "heliquest_like_transmembrane",
+        "hydrophobic_hotspot_fragment",
+        "hydrophobic_hotspot_start",
+        "hydrophobic_hotspot_end",
+        "hydrophobic_hotspot_hydropathy",
+        "hydrophobic_hotspot_hydrophobic_percent",
+        "property_notes",
+        "chemical_liability_flags",
+        "calculation_scope",
+        "error",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+
+    for row in rows:
+        properties = row.get("properties") or {}
+        screening = row.get("screening") or {}
+        hotspot = properties.get("hydrophobic_hotspot") or {}
+        writer.writerow(
+            {
+                "id": row.get("id"),
+                "sequence": row.get("sequence") or row.get("input_sequence"),
+                "status": row.get("status"),
+                "afpred_probability": row.get("probability"),
+                "afpred_probability_percent": row.get("probability_percent"),
+                "afpred_classification": row.get("classification"),
+                "afpred_rank": row.get("rank"),
+                "screening_tier": screening.get("tier"),
+                "afp_feature_score": screening.get("afp_feature_score", properties.get("afp_feature_score")),
+                "screening_liabilities": screening.get("liabilities"),
+                "length_aa": properties.get("length"),
+                "molecular_formula": properties.get("formula"),
+                "molecular_weight_da": properties.get("molecular_weight"),
+                "net_charge_approx_pH7": properties.get("net_charge"),
+                "charge_pH5_5": properties.get("charge_ph_5_5"),
+                "charge_pH7_0": properties.get("charge_ph_7_0"),
+                "charge_pH7_4": properties.get("charge_ph_7_4"),
+                "charge_density": properties.get("charge_density"),
+                "theoretical_pI": properties.get("isoelectric_point"),
+                "gravy_kd_hydropathy": properties.get("gravy"),
+                "hydrophobicity_kd_mean": properties.get("kd_hydrophobicity_mean"),
+                "eisenberg_hydrophobicity_mean": properties.get("eisenberg_hydrophobicity"),
+                "hydrophobic_percent": properties.get("hydrophobic_percent"),
+                "hydrophobic_moment_kd": properties.get("hydrophobic_moment"),
+                "normalized_hydrophobic_moment_kd": properties.get("normalized_hydrophobic_moment_kd"),
+                "eisenberg_hydrophobic_moment": properties.get("eisenberg_hydrophobic_moment"),
+                "hydrophobic_face_angle_deg": properties.get("hydrophobic_face_angle"),
+                "linear_hydrophobic_moment_kd": properties.get("linear_hydrophobic_moment"),
+                "linear_hydrophobic_moment_eisenberg": properties.get("linear_moment_eisenberg"),
+                "aliphatic_index": properties.get("aliphatic_index"),
+                "boman_index_kcal_per_mol": properties.get("boman_index"),
+                "instability_index": properties.get("instability_index"),
+                "instability_class": properties.get("instability_class"),
+                "estimated_half_life_mammalian_reticulocytes_in_vitro": properties.get(
+                    "estimated_half_life_mammalian_reticulocytes"
+                ),
+                "estimated_half_life_yeast_in_vivo": properties.get("estimated_half_life_yeast"),
+                "estimated_half_life_ecoli_in_vivo": properties.get("estimated_half_life_ecoli"),
+                "helix_propensity": properties.get("helix_propensity"),
+                "beta_propensity": properties.get("beta_propensity"),
+                "turn_propensity": properties.get("turn_propensity"),
+                "dominant_secondary_propensity": properties.get("dominant_secondary_propensity"),
+                "aromaticity_fraction": properties.get("aromaticity"),
+                "cysteine_count": properties.get("cysteines"),
+                "positive_percent": properties.get("positive_percent"),
+                "negative_percent": properties.get("negative_percent"),
+                "polar_percent": properties.get("polar_percent"),
+                "basic_residue_count": properties.get("basic_residue_count"),
+                "acidic_residue_count": properties.get("acidic_residue_count"),
+                "basic_to_acidic_ratio": properties.get("basic_to_acidic_ratio"),
+                "sequence_entropy": properties.get("sequence_entropy"),
+                "disorder_promoting_percent": properties.get("disorder_promoting_percent"),
+                "max_hydrophobic_run": properties.get("max_hydrophobic_run"),
+                "max_beta_aggregation_run": properties.get("max_beta_aggregation_run"),
+                "aggregation_risk_score": properties.get("aggregation_risk_score"),
+                "extinction_coefficient_reduced": properties.get("extinction_reduced"),
+                "extinction_coefficient_oxidized": properties.get("extinction_oxidized"),
+                "absorbance_0_1_percent_reduced": properties.get("absorbance_0_1_percent_reduced"),
+                "absorbance_0_1_percent_oxidized": properties.get("absorbance_0_1_percent_oxidized"),
+                "heliquest_like_discriminant": properties.get("heliquest_like_discriminant"),
+                "heliquest_like_lipid_binding": properties.get("heliquest_like_lipid_binding"),
+                "heliquest_like_transmembrane": properties.get("heliquest_like_transmembrane"),
+                "hydrophobic_hotspot_fragment": hotspot.get("fragment"),
+                "hydrophobic_hotspot_start": hotspot.get("start"),
+                "hydrophobic_hotspot_end": hotspot.get("end"),
+                "hydrophobic_hotspot_hydropathy": hotspot.get("hydropathy"),
+                "hydrophobic_hotspot_hydrophobic_percent": hotspot.get("hydrophobic_percent"),
+                "property_notes": properties.get("notes"),
+                "chemical_liability_flags": paper_table_liability_titles(properties),
+                "calculation_scope": PAPER_TABLE_SCOPE_NOTE if properties else "",
+                "error": row.get("error"),
             }
         )
 
@@ -1392,6 +1564,7 @@ def build_report_pack(results, summary, threshold, variant_parent=None, variant_
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("afpred_report.html", report_html)
         archive.writestr("data/afpred_predictions.csv", results_to_csv(results))
+        archive.writestr("data/afpred_paper_properties.csv", paper_properties_to_csv(results))
         archive.writestr("data/afpred_predictions.fasta", results_to_fasta(results))
         archive.writestr("data/sequence_clusters.csv", sequence_clusters_to_csv(results))
         for filename, svg in plots.items():
@@ -1491,6 +1664,7 @@ def build_utility_report_pack(results, summary):
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("peptide_utility_report.html", build_utility_report_html(results, summary, plots))
         archive.writestr("data/peptide_utilities.csv", utility_results_to_csv(results))
+        archive.writestr("data/peptide_paper_properties.csv", paper_properties_to_csv(results))
         for filename, svg in plots.items():
             archive.writestr(f"plots/{filename}", svg)
     output.seek(0)
@@ -1694,6 +1868,13 @@ def index():
                         mimetype="text/csv",
                         headers={"Content-Disposition": "attachment; filename=peptide_utilities.csv"},
                     )
+                if action == UTILITY_PAPER_TABLE_ACTION:
+                    csv_text = paper_properties_to_csv(utility_results)
+                    return Response(
+                        csv_text,
+                        mimetype="text/csv",
+                        headers={"Content-Disposition": "attachment; filename=peptide_paper_properties.csv"},
+                    )
                 if action == "utility_report_pack":
                     zip_bytes = build_utility_report_pack(utility_results, utility_summary)
                     return Response(
@@ -1764,6 +1945,13 @@ def index():
                         csv_text,
                         mimetype="text/csv",
                         headers={"Content-Disposition": "attachment; filename=afpred_predictions.csv"},
+                    )
+                if action == PAPER_TABLE_ACTION:
+                    csv_text = paper_properties_to_csv(results)
+                    return Response(
+                        csv_text,
+                        mimetype="text/csv",
+                        headers={"Content-Disposition": "attachment; filename=afpred_paper_properties.csv"},
                     )
                 if action == "fasta_download":
                     fasta_text = results_to_fasta(results)
@@ -1928,6 +2116,8 @@ def version():
                 "report_pack",
                 "variant_report_pack",
                 "utility_report_pack",
+                PAPER_TABLE_ACTION,
+                UTILITY_PAPER_TABLE_ACTION,
             ],
         }
     )

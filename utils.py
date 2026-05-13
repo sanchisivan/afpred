@@ -234,6 +234,29 @@ PKA_VALUES = {
     "Y": 10.1,
 }
 
+N_END_RULE_HALF_LIFE = {
+    "A": ("4.4 h", ">20 h", ">10 h"),
+    "R": ("1 h", "2 min", "2 min"),
+    "N": ("1.4 h", "3 min", ">10 h"),
+    "D": ("1.1 h", "3 min", ">10 h"),
+    "C": ("1.2 h", ">20 h", ">10 h"),
+    "Q": ("0.8 h", "10 min", ">10 h"),
+    "E": ("1 h", "30 min", ">10 h"),
+    "G": ("30 h", ">20 h", ">10 h"),
+    "H": ("3.5 h", "10 min", ">10 h"),
+    "I": ("20 h", "30 min", ">10 h"),
+    "L": ("5.5 h", "3 min", "2 min"),
+    "K": ("1.3 h", "3 min", "2 min"),
+    "M": ("30 h", ">20 h", ">10 h"),
+    "F": ("1.1 h", "3 min", "2 min"),
+    "P": (">20 h", ">20 h", "not available"),
+    "S": ("1.9 h", ">20 h", ">10 h"),
+    "T": ("7.2 h", ">20 h", ">10 h"),
+    "W": ("2.8 h", "3 min", "2 min"),
+    "Y": ("2.8 h", "10 min", "2 min"),
+    "V": ("100 h", ">20 h", ">10 h"),
+}
+
 
 def clean_sequence(sequence):
     return re.sub(r"[\s\-]", "", sequence or "").upper()
@@ -511,6 +534,15 @@ def instability_index(sequence):
     return {
         "instability_index": round(value, 2),
         "instability_class": "unstable" if value > 40 else "stable",
+    }
+
+
+def estimated_half_life(sequence):
+    mammalian, yeast, ecoli = N_END_RULE_HALF_LIFE.get(sequence[0], ("", "", ""))
+    return {
+        "estimated_half_life_mammalian_reticulocytes": mammalian,
+        "estimated_half_life_yeast": yeast,
+        "estimated_half_life_ecoli": ecoli,
     }
 
 
@@ -1104,6 +1136,7 @@ def peptide_properties(sequence):
     }
     properties.update(secondary_structure_propensity(seq))
     properties.update(instability_index(seq))
+    properties.update(estimated_half_life(seq))
     properties["sliding_windows"] = sliding_window_profiles(seq)
     properties["hydrophobic_hotspot"] = hydrophobic_hotspot(properties["sliding_windows"])
     properties["charge_profile"] = charge_profile(seq)
