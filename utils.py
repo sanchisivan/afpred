@@ -234,27 +234,27 @@ PKA_VALUES = {
     "Y": 10.1,
 }
 
-N_END_RULE_HALF_LIFE = {
-    "A": ("4.4 h", ">20 h", ">10 h"),
-    "R": ("1 h", "2 min", "2 min"),
-    "N": ("1.4 h", "3 min", ">10 h"),
-    "D": ("1.1 h", "3 min", ">10 h"),
-    "C": ("1.2 h", ">20 h", ">10 h"),
-    "Q": ("0.8 h", "10 min", ">10 h"),
-    "E": ("1 h", "30 min", ">10 h"),
-    "G": ("30 h", ">20 h", ">10 h"),
-    "H": ("3.5 h", "10 min", ">10 h"),
-    "I": ("20 h", "30 min", ">10 h"),
-    "L": ("5.5 h", "3 min", "2 min"),
-    "K": ("1.3 h", "3 min", "2 min"),
-    "M": ("30 h", ">20 h", ">10 h"),
-    "F": ("1.1 h", "3 min", "2 min"),
-    "P": (">20 h", ">20 h", "not available"),
-    "S": ("1.9 h", ">20 h", ">10 h"),
-    "T": ("7.2 h", ">20 h", ">10 h"),
-    "W": ("2.8 h", "3 min", "2 min"),
-    "Y": ("2.8 h", "10 min", "2 min"),
-    "V": ("100 h", ">20 h", ">10 h"),
+WIMLEY_WHITE_WHOLE_RESIDUE = {
+    "A": -0.17,
+    "R": -0.81,
+    "N": -0.42,
+    "D": -1.23,
+    "C": 0.24,
+    "Q": -0.58,
+    "E": -2.02,
+    "G": -0.01,
+    "H": -0.17,
+    "I": 0.31,
+    "L": 0.56,
+    "K": -0.99,
+    "M": 0.23,
+    "F": 1.13,
+    "P": -0.45,
+    "S": -0.13,
+    "T": -0.14,
+    "W": 1.85,
+    "Y": 0.94,
+    "V": -0.07,
 }
 
 
@@ -537,13 +537,12 @@ def instability_index(sequence):
     }
 
 
-def estimated_half_life(sequence):
-    mammalian, yeast, ecoli = N_END_RULE_HALF_LIFE.get(sequence[0], ("", "", ""))
-    return {
-        "estimated_half_life_mammalian_reticulocytes": mammalian,
-        "estimated_half_life_yeast": yeast,
-        "estimated_half_life_ecoli": ecoli,
-    }
+def formal_charge_for_table(counts):
+    return counts["K"] + counts["R"] + 0.25 * counts["H"] - counts["D"] - counts["E"]
+
+
+def wimley_white_hydrophobicity(sequence):
+    return -sum(WIMLEY_WHITE_WHOLE_RESIDUE[aa] for aa in sequence)
 
 
 def residue_composition(counts, length):
@@ -1112,6 +1111,8 @@ def peptide_properties(sequence):
         "length": length,
         "formula": molecular_formula(seq),
         "molecular_weight": round(mass, 2),
+        "table_charge": round(formal_charge_for_table(counts), 2),
+        "wimley_white_hydrophobicity": round(wimley_white_hydrophobicity(seq), 2),
         "net_charge": round(net_charge, 2),
         "charge_ph_5_5": round(charge_at_ph(seq, 5.5), 2),
         "charge_ph_7_0": round(charge_at_ph(seq, 7.0), 2),
@@ -1136,7 +1137,6 @@ def peptide_properties(sequence):
     }
     properties.update(secondary_structure_propensity(seq))
     properties.update(instability_index(seq))
-    properties.update(estimated_half_life(seq))
     properties["sliding_windows"] = sliding_window_profiles(seq)
     properties["hydrophobic_hotspot"] = hydrophobic_hotspot(properties["sliding_windows"])
     properties["charge_profile"] = charge_profile(seq)

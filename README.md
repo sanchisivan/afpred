@@ -7,12 +7,12 @@ AFPRED is a Flask web application for screening short peptide sequences with a t
 - Single and batch prediction for peptides of 6-40 canonical amino acids.
 - FASTA, one-sequence-per-line, comma/semicolon separated, CSV, or TSV input with candidate IDs preserved when an ID/name column is supplied.
 - Adjustable decision threshold.
-- CSV export of predictions, descriptors, paper-style property tables, clean FASTA export for valid sequences, and downloadable report packs with SVG plots plus a self-contained HTML report.
+- CSV export of predictions and descriptors, Excel export of basic peptide properties, clean FASTA export for valid sequences, and downloadable report packs with SVG plots plus a self-contained HTML report.
 - JSON API endpoints for prediction, variant exploration, and property-only utilities.
 - On-demand variant exploration endpoint for activity-boosting substitution scans, alanine/tryptophan/lysine/arginine/proline scans, adjacent double substitutions, scramble controls, charge inversion, retro-inverso text proxies, hydrophobicity tempering, and terminal truncations.
 - Health endpoint for deployment monitoring.
 - Input QC for unsupported residues, terminal-modification text, duplicate sequences, and batch-level invalid records.
-- Peptide descriptors: length, molecular formula, approximate molecular weight, net charge at pH 7 and pH 5.5/7.4, charge density, estimated isoelectric point, GRAVY hydropathy, hydrophobic moment, aliphatic index, Boman-like index, Chou-Fasman-style secondary-structure propensities, Guruprasad instability index, N-end rule half-life estimates, extinction coefficient, hydrophobic/positive/negative/polar residue percentage, aromaticity, cysteine count, sequence entropy, terminal profile, sliding-window profiles, composition, and profile tags.
+- Peptide descriptors: length, molecular formula, approximate molecular weight, table-style charge, net charge at pH 7 and pH 5.5/7.4, charge density, estimated isoelectric point, Wimley-White whole-residue hydrophobicity, GRAVY hydropathy, hydrophobic moment, aliphatic index, Boman-like index, Chou-Fasman-style secondary-structure propensities, Guruprasad instability index, extinction coefficient, hydrophobic/positive/negative/polar residue percentage, aromaticity, cysteine count, sequence entropy, terminal profile, sliding-window profiles, composition, and profile tags.
 - Interpretation flags for membrane-active profiles, high hydrophobicity, low cationic character, aromatic enrichment, cysteine-rich candidates, basic residue clusters, and low-complexity sequences.
 - Descriptor-based screening tier to separate candidates to advance, review, or deprioritize.
 - Batch comparison plots and sequence-clustering tables for identifying candidate families and reducing redundancy beyond exact duplicates.
@@ -126,7 +126,7 @@ This endpoint returns the Utilities-tab descriptors without loading or invoking 
 
 ## Utilities Tab
 
-The Utilities tab computes physicochemical properties without invoking the AFPRED model. It accepts the same plain-text, CSV/TSV-like, or FASTA inputs and exports a utility CSV plus a paper-style property table with formula, mass, pI, pH-dependent charge, GRAVY/KD and Eisenberg hydrophobicity descriptors, hydrophobic moment, hydrophobic face angle, HeliQuest-like discriminant, Boman-like index, N-end rule half-life estimates, disorder-promoting fraction, aggregation-risk descriptors, extinction coefficients, and sequence-level liability flags for oxidation, deamidation/isomerization, cyclization, protease-like cleavage motifs, solubility, aggregation, and charge/pI context.
+The Utilities tab computes physicochemical properties without invoking the AFPRED model. It accepts the same plain-text, CSV/TSV-like, or FASTA inputs and exports a utility CSV plus an Excel table with peptide code, sequence, length, mass, charge, pI, Wimley-White whole-residue hydrophobicity, hydropathy, and Boman index. The full utility CSV also includes pH-dependent charge, GRAVY/KD and Eisenberg hydrophobicity descriptors, hydrophobic moment, hydrophobic face angle, HeliQuest-like discriminant, disorder-promoting fraction, aggregation-risk descriptors, extinction coefficients, and sequence-level liability flags for oxidation, deamidation/isomerization, cyclization, protease-like cleavage motifs, solubility, aggregation, and charge/pI context.
 
 ## Report Packs
 
@@ -134,7 +134,7 @@ The prediction and design forms can export ZIP report packs. Each pack includes:
 
 - A self-contained HTML report for sharing or archiving.
 - Editable SVG plots for score ranking, score distribution, charge/hydrophobicity mapping, and pH charge profiles.
-- CSV, paper-style property table, and FASTA data files for downstream analysis.
+- CSV, Excel basic-property table, and FASTA data files for downstream analysis.
 - For variant report packs, a variant delta plot plus variant CSV/FASTA files.
 - Utility report packs add mass/pI, hydropathy/moment, secondary-descriptor context, aggregation-risk, chemical-liability, and residue-composition plots. Prediction report packs also include batch comparison and sequence-clustering outputs.
 

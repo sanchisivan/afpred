@@ -7,6 +7,7 @@ import zipfile
 from datetime import datetime
 from functools import lru_cache
 from html import escape
+from xml.sax.saxutils import escape as xml_escape
 
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, request
@@ -30,17 +31,13 @@ from utils import (
 
 
 MODEL_PATH = "antifungal_peptide_model.h5"
-APP_VERSION = "2026.05.13-paper-properties-export"
+APP_VERSION = "2026.05.13-basic-properties-excel"
 DEFAULT_VARIANT_MODE = "activity_optimization"
 DESIGN_ACTIONS = {"variants", "variant_download", "variant_fasta", "variant_report_pack"}
 REPORT_ACTIONS = {"report_pack", "variant_report_pack"}
-PAPER_TABLE_ACTION = "paper_table_download"
-UTILITY_PAPER_TABLE_ACTION = "utility_paper_table_download"
-UTILITY_ACTIONS = {"utilities", "utility_download", "utility_report_pack", UTILITY_PAPER_TABLE_ACTION}
-PAPER_TABLE_SCOPE_NOTE = (
-    "Computed from linear canonical amino-acid sequence only; external ADMET, toxicity, "
-    "allergenicity, hemolysis, CPP, docking, and experimental activity values are not included."
-)
+BASIC_PROPERTIES_XLSX_ACTION = "basic_properties_xlsx"
+UTILITY_BASIC_PROPERTIES_XLSX_ACTION = "utility_basic_properties_xlsx"
+UTILITY_ACTIONS = {"utilities", "utility_download", "utility_report_pack", UTILITY_BASIC_PROPERTIES_XLSX_ACTION}
 VARIANT_MODES = {
     "none": "Prediction only",
     "activity_optimization": "Activity-boosting substitution scan",
@@ -361,169 +358,153 @@ def results_to_csv(results):
     return output.getvalue()
 
 
-def paper_table_liability_titles(properties):
-    titles = [item["title"] for item in properties.get("chemical_liabilities", [])]
-    if not titles:
-        titles = [item["title"] for item in properties.get("alerts", [])]
-    return " | ".join(titles)
+def excel_column_name(index):
+    name = ""
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        name = chr(65 + remainder) + name
+    return name
 
 
-def paper_properties_to_csv(rows):
-    output = io.StringIO()
-    fieldnames = [
-        "id",
-        "sequence",
-        "status",
-        "afpred_probability",
-        "afpred_probability_percent",
-        "afpred_classification",
-        "afpred_rank",
-        "screening_tier",
-        "afp_feature_score",
-        "screening_liabilities",
-        "length_aa",
-        "molecular_formula",
-        "molecular_weight_da",
-        "net_charge_approx_pH7",
-        "charge_pH5_5",
-        "charge_pH7_0",
-        "charge_pH7_4",
-        "charge_density",
-        "theoretical_pI",
-        "gravy_kd_hydropathy",
-        "hydrophobicity_kd_mean",
-        "eisenberg_hydrophobicity_mean",
-        "hydrophobic_percent",
-        "hydrophobic_moment_kd",
-        "normalized_hydrophobic_moment_kd",
-        "eisenberg_hydrophobic_moment",
-        "hydrophobic_face_angle_deg",
-        "linear_hydrophobic_moment_kd",
-        "linear_hydrophobic_moment_eisenberg",
-        "aliphatic_index",
-        "boman_index_kcal_per_mol",
-        "instability_index",
-        "instability_class",
-        "estimated_half_life_mammalian_reticulocytes_in_vitro",
-        "estimated_half_life_yeast_in_vivo",
-        "estimated_half_life_ecoli_in_vivo",
-        "helix_propensity",
-        "beta_propensity",
-        "turn_propensity",
-        "dominant_secondary_propensity",
-        "aromaticity_fraction",
-        "cysteine_count",
-        "positive_percent",
-        "negative_percent",
-        "polar_percent",
-        "basic_residue_count",
-        "acidic_residue_count",
-        "basic_to_acidic_ratio",
-        "sequence_entropy",
-        "disorder_promoting_percent",
-        "max_hydrophobic_run",
-        "max_beta_aggregation_run",
-        "aggregation_risk_score",
-        "extinction_coefficient_reduced",
-        "extinction_coefficient_oxidized",
-        "absorbance_0_1_percent_reduced",
-        "absorbance_0_1_percent_oxidized",
-        "heliquest_like_discriminant",
-        "heliquest_like_lipid_binding",
-        "heliquest_like_transmembrane",
-        "hydrophobic_hotspot_fragment",
-        "hydrophobic_hotspot_start",
-        "hydrophobic_hotspot_end",
-        "hydrophobic_hotspot_hydropathy",
-        "hydrophobic_hotspot_hydrophobic_percent",
-        "property_notes",
-        "chemical_liability_flags",
-        "calculation_scope",
-        "error",
+def excel_cell_reference(row_index, column_index):
+    return f"{excel_column_name(column_index)}{row_index}"
+
+
+def excel_cell(row_index, column_index, value, style_id=None):
+    reference = excel_cell_reference(row_index, column_index)
+    style = f' s="{style_id}"' if style_id is not None else ""
+    if value is None or value == "":
+        return f'<c r="{reference}"{style}/>'
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return f'<c r="{reference}"{style}><v>{value}</v></c>'
+    text = xml_escape(str(value))
+    return f'<c r="{reference}" t="inlineStr"{style}><is><t>{text}</t></is></c>'
+
+
+def format_table_charge(value):
+    if value is None:
+        return ""
+    if abs(value) < 0.005:
+        return "0"
+    formatted = f"{abs(value):.2f}".rstrip("0").rstrip(".")
+    return f"{'+' if value > 0 else '-'} {formatted}"
+
+
+def basic_property_values(rows):
+    valid_rows = [row for row in rows if row.get("sequence") and row.get("properties")]
+    if not valid_rows:
+        raise ValueError("No valid peptide sequences are available for Excel export.")
+    values = [
+        [
+            "Peptide codes",
+            "Peptide Sequence",
+            "Peptide Length",
+            "Peptide mass (Daltons)",
+            "Charge",
+            "pI",
+            "Hydrophobicity (Wimley-White whole-residue)",
+            "Hydropathy value",
+            "Boman Index (kcal/mol)",
+        ]
     ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames)
-    writer.writeheader()
-
-    for row in rows:
+    for row in valid_rows:
         properties = row.get("properties") or {}
-        screening = row.get("screening") or {}
-        hotspot = properties.get("hydrophobic_hotspot") or {}
-        writer.writerow(
-            {
-                "id": row.get("id"),
-                "sequence": row.get("sequence") or row.get("input_sequence"),
-                "status": row.get("status"),
-                "afpred_probability": row.get("probability"),
-                "afpred_probability_percent": row.get("probability_percent"),
-                "afpred_classification": row.get("classification"),
-                "afpred_rank": row.get("rank"),
-                "screening_tier": screening.get("tier"),
-                "afp_feature_score": screening.get("afp_feature_score", properties.get("afp_feature_score")),
-                "screening_liabilities": screening.get("liabilities"),
-                "length_aa": properties.get("length"),
-                "molecular_formula": properties.get("formula"),
-                "molecular_weight_da": properties.get("molecular_weight"),
-                "net_charge_approx_pH7": properties.get("net_charge"),
-                "charge_pH5_5": properties.get("charge_ph_5_5"),
-                "charge_pH7_0": properties.get("charge_ph_7_0"),
-                "charge_pH7_4": properties.get("charge_ph_7_4"),
-                "charge_density": properties.get("charge_density"),
-                "theoretical_pI": properties.get("isoelectric_point"),
-                "gravy_kd_hydropathy": properties.get("gravy"),
-                "hydrophobicity_kd_mean": properties.get("kd_hydrophobicity_mean"),
-                "eisenberg_hydrophobicity_mean": properties.get("eisenberg_hydrophobicity"),
-                "hydrophobic_percent": properties.get("hydrophobic_percent"),
-                "hydrophobic_moment_kd": properties.get("hydrophobic_moment"),
-                "normalized_hydrophobic_moment_kd": properties.get("normalized_hydrophobic_moment_kd"),
-                "eisenberg_hydrophobic_moment": properties.get("eisenberg_hydrophobic_moment"),
-                "hydrophobic_face_angle_deg": properties.get("hydrophobic_face_angle"),
-                "linear_hydrophobic_moment_kd": properties.get("linear_hydrophobic_moment"),
-                "linear_hydrophobic_moment_eisenberg": properties.get("linear_moment_eisenberg"),
-                "aliphatic_index": properties.get("aliphatic_index"),
-                "boman_index_kcal_per_mol": properties.get("boman_index"),
-                "instability_index": properties.get("instability_index"),
-                "instability_class": properties.get("instability_class"),
-                "estimated_half_life_mammalian_reticulocytes_in_vitro": properties.get(
-                    "estimated_half_life_mammalian_reticulocytes"
-                ),
-                "estimated_half_life_yeast_in_vivo": properties.get("estimated_half_life_yeast"),
-                "estimated_half_life_ecoli_in_vivo": properties.get("estimated_half_life_ecoli"),
-                "helix_propensity": properties.get("helix_propensity"),
-                "beta_propensity": properties.get("beta_propensity"),
-                "turn_propensity": properties.get("turn_propensity"),
-                "dominant_secondary_propensity": properties.get("dominant_secondary_propensity"),
-                "aromaticity_fraction": properties.get("aromaticity"),
-                "cysteine_count": properties.get("cysteines"),
-                "positive_percent": properties.get("positive_percent"),
-                "negative_percent": properties.get("negative_percent"),
-                "polar_percent": properties.get("polar_percent"),
-                "basic_residue_count": properties.get("basic_residue_count"),
-                "acidic_residue_count": properties.get("acidic_residue_count"),
-                "basic_to_acidic_ratio": properties.get("basic_to_acidic_ratio"),
-                "sequence_entropy": properties.get("sequence_entropy"),
-                "disorder_promoting_percent": properties.get("disorder_promoting_percent"),
-                "max_hydrophobic_run": properties.get("max_hydrophobic_run"),
-                "max_beta_aggregation_run": properties.get("max_beta_aggregation_run"),
-                "aggregation_risk_score": properties.get("aggregation_risk_score"),
-                "extinction_coefficient_reduced": properties.get("extinction_reduced"),
-                "extinction_coefficient_oxidized": properties.get("extinction_oxidized"),
-                "absorbance_0_1_percent_reduced": properties.get("absorbance_0_1_percent_reduced"),
-                "absorbance_0_1_percent_oxidized": properties.get("absorbance_0_1_percent_oxidized"),
-                "heliquest_like_discriminant": properties.get("heliquest_like_discriminant"),
-                "heliquest_like_lipid_binding": properties.get("heliquest_like_lipid_binding"),
-                "heliquest_like_transmembrane": properties.get("heliquest_like_transmembrane"),
-                "hydrophobic_hotspot_fragment": hotspot.get("fragment"),
-                "hydrophobic_hotspot_start": hotspot.get("start"),
-                "hydrophobic_hotspot_end": hotspot.get("end"),
-                "hydrophobic_hotspot_hydropathy": hotspot.get("hydropathy"),
-                "hydrophobic_hotspot_hydrophobic_percent": hotspot.get("hydrophobic_percent"),
-                "property_notes": properties.get("notes"),
-                "chemical_liability_flags": paper_table_liability_titles(properties),
-                "calculation_scope": PAPER_TABLE_SCOPE_NOTE if properties else "",
-                "error": row.get("error"),
-            }
+        values.append(
+            [
+                row.get("id"),
+                row.get("sequence"),
+                properties.get("length"),
+                properties.get("molecular_weight"),
+                format_table_charge(properties.get("table_charge")),
+                properties.get("isoelectric_point"),
+                properties.get("wimley_white_hydrophobicity"),
+                properties.get("gravy"),
+                properties.get("boman_index"),
+            ]
         )
+    return values
 
+
+def build_basic_properties_xlsx(rows):
+    values = basic_property_values(rows)
+    row_xml = []
+    for row_index, row in enumerate(values, start=1):
+        cells = []
+        for column_index, value in enumerate(row, start=1):
+            cells.append(excel_cell(row_index, column_index, value, style_id=1 if row_index == 1 else None))
+        row_xml.append(f'<row r="{row_index}">{"".join(cells)}</row>')
+
+    last_row = len(values)
+    table_range = f"A1:I{last_row}"
+    sheet_xml = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews>
+  <cols>
+    <col min="1" max="1" width="18" customWidth="1"/>
+    <col min="2" max="2" width="34" customWidth="1"/>
+    <col min="3" max="9" width="18" customWidth="1"/>
+  </cols>
+  <sheetData>{"".join(row_xml)}</sheetData>
+  <autoFilter ref="{table_range}"/>
+</worksheet>'''
+    styles_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font></fonts>
+  <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E79"/><bgColor indexed="64"/></patternFill></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1"/></cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>'''
+    workbook_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Basic Properties" sheetId="1" r:id="rId1"/></sheets>
+</workbook>'''
+    workbook_rels_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>'''
+    rels_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>'''
+    content_types_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+</Types>'''
+    timestamp = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    core_xml = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>Basic peptide properties</dc:title>
+  <dc:creator>AFPRED</dc:creator>
+  <cp:lastModifiedBy>AFPRED</cp:lastModifiedBy>
+  <dcterms:created xsi:type="dcterms:W3CDTF">{timestamp}</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">{timestamp}</dcterms:modified>
+</cp:coreProperties>'''
+    app_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+  <Application>AFPRED</Application>
+</Properties>'''
+
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", content_types_xml)
+        archive.writestr("_rels/.rels", rels_xml)
+        archive.writestr("xl/workbook.xml", workbook_xml)
+        archive.writestr("xl/_rels/workbook.xml.rels", workbook_rels_xml)
+        archive.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+        archive.writestr("xl/styles.xml", styles_xml)
+        archive.writestr("docProps/core.xml", core_xml)
+        archive.writestr("docProps/app.xml", app_xml)
     return output.getvalue()
 
 
@@ -1564,7 +1545,7 @@ def build_report_pack(results, summary, threshold, variant_parent=None, variant_
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("afpred_report.html", report_html)
         archive.writestr("data/afpred_predictions.csv", results_to_csv(results))
-        archive.writestr("data/afpred_paper_properties.csv", paper_properties_to_csv(results))
+        archive.writestr("data/afpred_basic_properties.xlsx", build_basic_properties_xlsx(results))
         archive.writestr("data/afpred_predictions.fasta", results_to_fasta(results))
         archive.writestr("data/sequence_clusters.csv", sequence_clusters_to_csv(results))
         for filename, svg in plots.items():
@@ -1664,7 +1645,7 @@ def build_utility_report_pack(results, summary):
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("peptide_utility_report.html", build_utility_report_html(results, summary, plots))
         archive.writestr("data/peptide_utilities.csv", utility_results_to_csv(results))
-        archive.writestr("data/peptide_paper_properties.csv", paper_properties_to_csv(results))
+        archive.writestr("data/peptide_basic_properties.xlsx", build_basic_properties_xlsx(results))
         for filename, svg in plots.items():
             archive.writestr(f"plots/{filename}", svg)
     output.seek(0)
@@ -1868,12 +1849,12 @@ def index():
                         mimetype="text/csv",
                         headers={"Content-Disposition": "attachment; filename=peptide_utilities.csv"},
                     )
-                if action == UTILITY_PAPER_TABLE_ACTION:
-                    csv_text = paper_properties_to_csv(utility_results)
+                if action == UTILITY_BASIC_PROPERTIES_XLSX_ACTION:
+                    workbook_bytes = build_basic_properties_xlsx(utility_results)
                     return Response(
-                        csv_text,
-                        mimetype="text/csv",
-                        headers={"Content-Disposition": "attachment; filename=peptide_paper_properties.csv"},
+                        workbook_bytes,
+                        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": "attachment; filename=peptide_basic_properties.xlsx"},
                     )
                 if action == "utility_report_pack":
                     zip_bytes = build_utility_report_pack(utility_results, utility_summary)
@@ -1946,12 +1927,12 @@ def index():
                         mimetype="text/csv",
                         headers={"Content-Disposition": "attachment; filename=afpred_predictions.csv"},
                     )
-                if action == PAPER_TABLE_ACTION:
-                    csv_text = paper_properties_to_csv(results)
+                if action == BASIC_PROPERTIES_XLSX_ACTION:
+                    workbook_bytes = build_basic_properties_xlsx(results)
                     return Response(
-                        csv_text,
-                        mimetype="text/csv",
-                        headers={"Content-Disposition": "attachment; filename=afpred_paper_properties.csv"},
+                        workbook_bytes,
+                        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": "attachment; filename=afpred_basic_properties.xlsx"},
                     )
                 if action == "fasta_download":
                     fasta_text = results_to_fasta(results)
@@ -2116,8 +2097,8 @@ def version():
                 "report_pack",
                 "variant_report_pack",
                 "utility_report_pack",
-                PAPER_TABLE_ACTION,
-                UTILITY_PAPER_TABLE_ACTION,
+                BASIC_PROPERTIES_XLSX_ACTION,
+                UTILITY_BASIC_PROPERTIES_XLSX_ACTION,
             ],
         }
     )
