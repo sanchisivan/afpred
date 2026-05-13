@@ -20,8 +20,7 @@ AFPRED is a Flask web application for screening short peptide sequences with a t
 - Variant CSV, FASTA, and report-pack exports with parent sequence, mutation, score delta, rationale, plots, and core descriptor fields.
 - A standalone Utilities tab for PepCalc-style calculations without running the antifungal model.
 - Utilities report packs with descriptor CSV, charge/hydrophobicity plots, pH charge profiles, mass/pI maps, hydropathy/moment maps, aggregation-risk plots, liability-flag plots, residue-composition heatmaps, and an HTML summary.
-- A tabbed scientific workbench interface with prediction, design, utilities, batch/export, model-readiness, and information/contact sections.
-- External model integration notes for AMP, toxicity, hemolysis, and antifungal-protein predictors that could be wired in as optional screening backends.
+- A tabbed scientific workbench interface with prediction, design, utilities, and information/contact sections.
 
 ## Run Locally
 

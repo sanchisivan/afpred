@@ -30,7 +30,7 @@ from utils import (
 
 
 MODEL_PATH = "antifungal_peptide_model.h5"
-APP_VERSION = "2026.05.12-utility-dashboard"
+APP_VERSION = "2026.05.13-no-reports-export-tab"
 DEFAULT_VARIANT_MODE = "activity_optimization"
 DESIGN_ACTIONS = {"variants", "variant_download", "variant_fasta", "variant_report_pack"}
 REPORT_ACTIONS = {"report_pack", "variant_report_pack"}
@@ -55,38 +55,6 @@ DESIGN_VARIANT_MODES = {
     for key, label in VARIANT_MODES.items()
     if key != "none"
 }
-EXTERNAL_MODEL_CANDIDATES = [
-    {
-        "name": "AMPlify",
-        "task": "General AMP prediction",
-        "integration": "Possible, but best isolated in a legacy conda/Docker worker because upstream dependencies target Python 3.6, TensorFlow 1.12, and Keras 2.2.4.",
-        "status": "candidate",
-    },
-    {
-        "name": "AMPidentifier",
-        "task": "General AMP ensemble prediction",
-        "integration": "Promising Python/PyPI option with built-in RF/SVM/GB models and modlAMP descriptors; needs dependency test before adding to production requirements.",
-        "status": "candidate",
-    },
-    {
-        "name": "ToxinPred2",
-        "task": "Toxicity prediction",
-        "integration": "Standalone/PyPI exists, but the model bundle and optional BLAST requirements must be installed and version-locked separately.",
-        "status": "candidate",
-    },
-    {
-        "name": "HemoPI2",
-        "task": "Hemolysis classification/regression",
-        "integration": "GitHub/PyPI code is available, but the large model directory is distributed separately by the authors; best added later as an optional local backend.",
-        "status": "not bundled",
-    },
-    {
-        "name": "AntiFP / AntiFP2",
-        "task": "Antifungal prediction",
-        "integration": "AntiFP is methodologically relevant for AFPs; AntiFP2 targets antifungal proteins and may be heavier than needed for short peptide screening.",
-        "status": "review",
-    },
-]
 
 app = Flask(__name__)
 
@@ -1846,7 +1814,6 @@ def index():
         lab_name="Laboratory of Bioactive Peptides",
         contact_email="sanchisivan@fbcb.unl.edu.ar",
         group_leader_email="asiano@fbcb.unl.edu.ar",
-        external_model_candidates=EXTERNAL_MODEL_CANDIDATES,
     )
 
 

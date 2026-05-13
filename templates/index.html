@@ -1135,7 +1135,7 @@
         </div>
       </div>
       <div class="status-strip">
-        <span class="chip">Reports build <strong>{{ app_version }}</strong></span>
+        <span class="chip">Build <strong>{{ app_version }}</strong></span>
         <span class="chip">Model <strong>Keras H5</strong></span>
         <span class="chip">Length <strong>{{ min_length }}-{{ max_length }} aa</strong></span>
         <span class="chip">Threshold <strong>{{ "%.2f"|format(threshold) }}</strong></span>
@@ -1146,7 +1146,6 @@
       <button class="tab-button {% if active_tab == 'predict' %}active{% endif %}" type="button" data-tab="predict">Predict</button>
       <button class="tab-button {% if active_tab == 'design' %}active{% endif %}" type="button" data-tab="design">Analyze & Design</button>
       <button class="tab-button {% if active_tab == 'utilities' %}active{% endif %}" type="button" data-tab="utilities">Utilities</button>
-      <button class="tab-button" type="button" data-tab="batch">Reports & Export</button>
       <button class="tab-button" type="button" data-tab="contact">Info & Contact</button>
     </nav>
 
@@ -1606,90 +1605,6 @@
           </div>
         </section>
       </div>
-    </section>
-
-    <section class="tab-panel" data-tab-panel="batch">
-      <div class="two-col">
-        <section class="panel">
-          <div class="panel-header"><h2 class="panel-title">Reports and Export</h2></div>
-          <div class="panel-body stack">
-            <div class="callout signal">
-              <span class="callout-title">Where to export plots</span>
-              <span class="callout-detail">Use the compact Reports box in Predict for screening or variant ZIPs.</span>
-            </div>
-            <div class="callout context">
-              <span class="callout-title">Utility report packs</span>
-              <span class="callout-detail">Use the compact Reports box in Utilities for descriptor plots without running the model.</span>
-            </div>
-            <div class="callout context">
-              <span class="callout-title">Accepted formats</span>
-              <span class="callout-detail">Use one sequence per line, comma/semicolon separated text, or FASTA records. Invalid sequences are reported per record so the full batch can still be reviewed.</span>
-            </div>
-            <div class="callout signal">
-              <span class="callout-title">CSV, FASTA, plots, and reports</span>
-              <span class="callout-detail">Prediction exports include scores, rank, duplicate status, screening tier, formula, pI, charge at pH 5.5/7.4, descriptors, interpretation flags, validation errors, clean FASTA output for valid sequences, editable SVG plots, and a self-contained HTML report. Variant report packs add parent ID, mutation, position, score delta, rationale, and descriptor fields.</span>
-            </div>
-            <div class="callout caution">
-              <span class="callout-title">Model representation</span>
-              <span class="callout-detail">D-amino acids, cyclization, terminal capping, non-canonical residues, salts, and formulation effects are not represented in the sequence model.</span>
-            </div>
-            <div class="callout context">
-              <span class="callout-title">Large-screening workflow</span>
-              <span class="callout-detail">Paste or upload candidate libraries as FASTA/text, rank by AFPRED probability, retain candidates marked advance/review, then run mutation utilities only on selected parents before toxicity, hemolysis, novelty, synthesis, and experimental triage.</span>
-            </div>
-          </div>
-        </section>
-
-        <aside class="panel">
-          <div class="panel-header"><h2 class="panel-title">In-app Workflow</h2></div>
-          <div class="panel-body stack">
-            <div class="callout signal">
-              <span class="callout-title">1. Predict</span>
-              <span class="callout-detail">Load a peptide library in the Predict tab and rank candidates with AFPRED.</span>
-            </div>
-            <div class="callout context">
-              <span class="callout-title">2. Calculate</span>
-              <span class="callout-detail">Use the Utilities tab for PepCalc-style physicochemical calculations without invoking the model.</span>
-            </div>
-            <div class="callout context">
-              <span class="callout-title">3. Design</span>
-              <span class="callout-detail">Run mutation analysis only for selected high-priority parent peptides.</span>
-            </div>
-            <div class="callout caution">
-              <span class="callout-title">Developer endpoints</span>
-              <span class="callout-detail">JSON endpoints remain available at /api/predict, /api/variants, and /api/properties for automation, but normal use does not require them.</span>
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      <section class="panel mt-3">
-        <div class="panel-header"><h2 class="panel-title">External Model Candidates</h2></div>
-        <div class="panel-body">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Model/tool</th>
-                  <th>Task</th>
-                  <th>Integration note</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for model in external_model_candidates %}
-                  <tr>
-                    <td><strong>{{ model.name }}</strong></td>
-                    <td>{{ model.task }}</td>
-                    <td>{{ model.integration }}</td>
-                    <td><span class="chip">{{ model.status }}</span></td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
     </section>
 
     <section class="tab-panel" data-tab-panel="contact">
